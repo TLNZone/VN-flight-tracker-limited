@@ -5,254 +5,286 @@ import PriceTable from './components/PriceTable';
 import RequestCounter from './components/RequestCounter';
 import './App.css';
 
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-const ROUTES = [
-  { code: 'SZG:DAD', label: 'Salzburg → Da Nang' },
-  { code: 'MUC:DAD', label: 'Munich → Da Nang' },
-  { code: 'VIE:DAD', label: 'Vienna → Da Nang' },
-  { code: 'FRA:DAD', label: 'Frankfurt → Da Nang' }
-];
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('supabaseUrl and supabaseAnonKey are required');
+}
+
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function App() {
-  const [prices, setPrices] = useState([]);
-  const [trends, setTrends] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [flights, setFlights] = useState([]);
+  const [trendData, setTrendData] = useState([]);
+  const [requestCount, setRequestCount] = useState(0);
   const [selectedRoute, setSelectedRoute] = useState('SZG:DAD');
+  const [loading, setLoading] = useState(false);
   const [sortBy, setSortBy] = useState('price');
   const [filterDirect, setFilterDirect] = useState(false);
-  const [maxPrice, setMaxPrice] = useState(null);
-  const [requestCount, setRequestCount] = useState(0);
-  const [lastUpdate, setLastUpdate] = useState(null);
+  const [maxPrice, setMaxPrice] = useState(2000);
+  const [maxDuration, setMaxDuration] = useState(30);
+  const [stats, setStats] = useState({
+    bestPrice: null,
+    averagePrice: null,
+    daysTracked: 0,
+    checksCompleted: 0,
+  });
 
+  const routes = [
+    { code: 'SZG:DAD', label: 'Salzburg → Da Nang' },
+    { code: 'MUC:DAD', label: 'Munich → Da Nang' },
+    { code: 'VIE:DAD', label: 'Vienna → Da Nang' },
+    { code: 'FRA:DAD', label: 'Frankfurt → Da Nang' },
+  ];
+
+  // Fetch flights and trends
   useEffect(() => {
-    loadData();
-    
-    // Subscribe to realtime updates
-    const sub = supabase
-      .channel('price_updates')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'price_history' },
-        (payload) => {
-          setPrices(prev => [payload.new, ...prev].slice(0, 100));
-          setLastUpdate(new Date());
-        }
-      )
-      .subscribe();
+    fetchData();
+    const interval = setInterval(fetchData, 30000); // Refresh every 30 seconds
+    return () => clearInterval(interval);
+  }, [selectedRoute]);
 
-    // Poll every 30 seconds for new data
-    const interval = setInterval(loadData, 30000);
-
-    return () => {
-      clearInterval(interval);
-      sub.unsubscribe();
-    };
-  }, []);
-
-  async function loadData() {
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      // Fetch latest prices
-      const { data: priceData, error: priceError } = await supabase
+      const [origin, destination] = selectedRoute.split(':');
+
+      // Fetch price history
+      const { data: historyData, error: historyError } = await supabase
         .from('price_history')
         .select('*')
-        .order('checked_at', { ascending: false })
-        .limit(500);
+        .eq('origin', origin)
+        .eq('destination', destination)
+        .order('checked_at', { ascending: false });
 
-      if (!priceError) setPrices(priceData || []);
+      if (historyError) throw historyError;
+
+      setFlights(historyData || []);
 
       // Fetch trends
-      const { data: trendData, error: trendError } = await supabase
+      const { data: trendsData, error: trendsError } = await supabase
         .from('price_trends')
         .select('*')
+        .eq('origin', origin)
+        .eq('destination', destination)
         .order('date', { ascending: false })
-        .limit(300);
+        .limit(30);
 
-      if (!trendError) setTrends(trendData || []);
+      if (trendsError) throw trendsError;
+
+      setTrendData(trendsData || []);
+
+      // Calculate stats
+      if (historyData && historyData.length > 0) {
+        const prices = historyData.map(f => f.price);
+        const uniqueDates = new Set(historyData.map(f => f.checked_at.split('T')[0]));
+
+        setStats({
+          bestPrice: Math.min(...prices),
+          averagePrice: Math.round(prices.reduce((a, b) => a + b, 0) / prices.length),
+          daysTracked: uniqueDates.size,
+          checksCompleted: historyData.length,
+        });
+      }
 
       // Fetch request count
-      const { data: countData } = await supabase
+      const { data: countData, error: countError } = await supabase
         .from('request_count')
         .select('count')
         .single();
 
-      setRequestCount(countData?.count || 0);
-
-      setLastUpdate(new Date());
-    } catch (err) {
-      console.error('Load error:', err);
+      if (!countError && countData) {
+        setRequestCount(countData.count);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  const [origin, dest] = selectedRoute.split(':');
-  const routePrices = prices.filter(p => p.origin === origin && p.destination === dest);
+  // Filter and sort flights
+  const filteredFlights = flights
+    .filter(f => {
+      if (filterDirect && f.outbound_stops > 0) return false;
+      if (f.price > maxPrice) return false;
+      if (f.duration_outbound > maxDuration * 60) return false; // Convert hours to minutes
+      return true;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'price':
+          return a.price - b.price;
+        case 'duration':
+          return a.duration_outbound - b.duration_outbound;
+        case 'departure':
+          return new Date(a.outbound_departure) - new Date(b.outbound_departure);
+        default:
+          return 0;
+      }
+    });
 
-  // Deduplicate by price + flight times (same flight typically reappears)
-  const uniquePrices = Array.from(
-    new Map(
-      routePrices.map(p => [
-        `${p.price}|${p.outbound_departure}|${p.outbound_arrival}`,
-        p
-      ])
-    ).values()
-  ).slice(0, 50);
+  const clearFilters = () => {
+    setFilterDirect(false);
+    setMaxPrice(2000);
+    setMaxDuration(30);
+  };
 
-  // Filter
-  let filtered = [...uniquePrices];
-  if (filterDirect) {
-    filtered = filtered.filter(f => f.outbound_stops === 0);
-  }
-  if (maxPrice) {
-    filtered = filtered.filter(f => f.price <= maxPrice);
-  }
-
-  // Sort
-  const sorted = [...filtered].sort((a, b) => {
-    if (sortBy === 'price') return a.price - b.price;
-    if (sortBy === 'duration') return a.duration_outbound - b.duration_outbound;
-    if (sortBy === 'time') return new Date(a.outbound_departure) - new Date(b.outbound_departure);
-    return 0;
-  });
-
-  const bestPrice = Math.min(...prices.map(p => p.price), Infinity);
-  const avgPrice = Math.round(prices.reduce((s, p) => s + p.price, 0) / prices.length || 0);
-  const trackedDays = new Set(prices.map(p => p.checked_at.split('T')[0])).size;
+  const hasActiveFilters = filterDirect || maxPrice < 2000 || maxDuration < 30;
 
   return (
-    <div className="container">
-      <header>
+    <div className="app-container">
+      <header className="header">
         <h1>✈️ Flight Price Tracker</h1>
-        <p>Salzburg | Munich | Vienna | Frankfurt → Da Nang, Vietnam</p>
-        <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-          Dec 19–22, 2026 → Jan 7–8, 2027 | 2 Adults, 2 Children | Max €1,450/person
-        </p>
+        <p>Salzburg, Munich, Vienna, Frankfurt → Da Nang, Vietnam</p>
       </header>
 
-      <RequestCounter count={requestCount} limit={980} />
+      <RequestCounter count={requestCount} />
 
-      <div className="stats-row">
-        <div className="stat">
-          <span className="label">Best price found</span>
-          <span className="value">{bestPrice !== Infinity ? `€${bestPrice}` : '—'}</span>
+      {/* Stats Cards */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-value">
+            {stats.bestPrice ? `€${stats.bestPrice}` : '—'}
+          </div>
+          <div className="stat-label">Best price found</div>
         </div>
-        <div className="stat">
-          <span className="label">Average</span>
-          <span className="value">{avgPrice > 0 ? `€${avgPrice}` : '—'}</span>
+        <div className="stat-card">
+          <div className="stat-value">
+            {stats.averagePrice ? `€${stats.averagePrice}` : '—'}
+          </div>
+          <div className="stat-label">Average price</div>
         </div>
-        <div className="stat">
-          <span className="label">Days tracked</span>
-          <span className="value">{trackedDays}</span>
+        <div className="stat-card">
+          <div className="stat-value">{stats.daysTracked}</div>
+          <div className="stat-label">Days tracked</div>
         </div>
-        <div className="stat">
-          <span className="label">Checks</span>
-          <span className="value">{prices.length}</span>
+        <div className="stat-card">
+          <div className="stat-value">{stats.checksCompleted}</div>
+          <div className="stat-label">Checks</div>
         </div>
       </div>
 
-      {lastUpdate && (
-        <p style={{ textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>
-          Last updated: {lastUpdate.toLocaleTimeString()}
-        </p>
-      )}
-
-      <section>
+      {/* Price Trends Chart */}
+      <div className="chart-section">
         <h2>Price Trends</h2>
-        <PriceChart trends={trends} routeKey={selectedRoute} />
-      </section>
+        <PriceChart data={trendData} />
+      </div>
 
-      <section>
-        <h2>Route</h2>
-        <div className="route-selector">
-          {ROUTES.map(route => (
+      {/* Route Selector */}
+      <div className="routes-section">
+        <h2>Select Route</h2>
+        <div className="routes-grid">
+          {routes.map(route => (
             <button
               key={route.code}
-              className={selectedRoute === route.code ? 'active' : ''}
+              className={`route-button ${selectedRoute === route.code ? 'active' : ''}`}
               onClick={() => setSelectedRoute(route.code)}
             >
               {route.label}
             </button>
           ))}
         </div>
-      </section>
+      </div>
 
-      <section>
-        <h2>Available Flights</h2>
-        <div className="controls-wrapper">
-          <div className="sort-controls">
-            <button
-              className={sortBy === 'price' ? 'active' : ''}
-              onClick={() => setSortBy('price')}
-            >
-              ↕ Price
-            </button>
-            <button
-              className={sortBy === 'duration' ? 'active' : ''}
-              onClick={() => setSortBy('duration')}
-            >
-              ↕ Duration
-            </button>
-            <button
-              className={sortBy === 'time' ? 'active' : ''}
-              onClick={() => setSortBy('time')}
-            >
-              ↕ Departure
-            </button>
-          </div>
-          
-          <div className="filter-controls">
-            <label className="filter-checkbox">
-              <input
-                type="checkbox"
-                checked={filterDirect}
-                onChange={(e) => setFilterDirect(e.target.checked)}
-              />
-              Direct only
-            </label>
-            <input
-              type="number"
-              placeholder="Max price (€)"
-              value={maxPrice || ''}
-              onChange={(e) => setMaxPrice(e.target.value ? parseInt(e.target.value) : null)}
-              className="price-input"
-            />
-            {(filterDirect || maxPrice) && (
-              <button
-                onClick={() => {
-                  setFilterDirect(false);
-                  setMaxPrice(null);
-                }}
-                className="clear-filters"
-              >
-                Clear filters
-              </button>
-            )}
-          </div>
+      {/* Sort and Filter Controls */}
+      <div className="controls-wrapper">
+        <div className="sort-controls">
+          <label>Sort by:</label>
+          <button
+            className={`sort-button ${sortBy === 'price' ? 'active' : ''}`}
+            onClick={() => setSortBy('price')}
+          >
+            ↕ Price
+          </button>
+          <button
+            className={`sort-button ${sortBy === 'duration' ? 'active' : ''}`}
+            onClick={() => setSortBy('duration')}
+          >
+            ↕ Duration
+          </button>
+          <button
+            className={`sort-button ${sortBy === 'departure' ? 'active' : ''}`}
+            onClick={() => setSortBy('departure')}
+          >
+            ↕ Departure
+          </button>
         </div>
 
+        <div className="filter-controls">
+          <label>
+            <input
+              type="checkbox"
+              checked={filterDirect}
+              onChange={e => setFilterDirect(e.target.checked)}
+              className="filter-checkbox"
+            />
+            Direct only
+          </label>
+
+          <label className="price-filter">
+            Max price per person (€):
+            <input
+              type="number"
+              min="100"
+              max="5000"
+              step="50"
+              value={maxPrice}
+              onChange={e => setMaxPrice(parseInt(e.target.value))}
+              className="price-input"
+            />
+            <span className="price-display">€{maxPrice}</span>
+          </label>
+
+          <label className="duration-filter">
+            Max duration (hours):
+            <input
+              type="number"
+              min="1"
+              max="48"
+              step="1"
+              value={maxDuration}
+              onChange={e => setMaxDuration(parseInt(e.target.value))}
+              className="duration-input"
+            />
+            <span className="duration-display">{maxDuration}h</span>
+          </label>
+
+          {hasActiveFilters && (
+            <button className="clear-filters" onClick={clearFilters}>
+              Clear filters
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Flights Table */}
+      <div className="table-section">
+        <h2>
+          Available Flights
+          {filteredFlights.length > 0 && ` (${filteredFlights.length})`}
+        </h2>
         {loading ? (
-          <p style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>Loading...</p>
-        ) : sorted.length > 0 ? (
-          <PriceTable flights={sorted} />
+          <p className="loading">Loading...</p>
+        ) : filteredFlights.length > 0 ? (
+          <PriceTable flights={filteredFlights} />
+        ) : flights.length > 0 ? (
+          <p className="no-results">
+            No flights match your filters. Try adjusting price or duration limits.
+          </p>
         ) : (
-          <p style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
-            No prices found yet. Check back later.
+          <p className="no-data">
+            No flight data available yet. Price checker runs 4 times daily at 6 AM, 12 PM, 6 PM, 10 PM UTC.
           </p>
         )}
-      </section>
+      </div>
 
-      <footer>
+      <footer className="footer">
         <p>
-          Prices from <strong>Ignav API</strong> | Real-time tracking (4-5 checks/day) |
-          Max 980 requests
-        </p>
-        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
-          <strong>Note:</strong> Prices exclude seat selection fees. Most airlines auto-assign seats
-          for free; premium seats cost €20–60 extra.
+          💡 Prices shown are base fares. Seat selection fees (€20–60) not included.
+          <br />
+          🔐 Your dashboard is public; API keys stay encrypted in GitHub Secrets.
         </p>
       </footer>
     </div>
