@@ -1,13 +1,42 @@
--- Request counter table
+-- ============================================
+-- Flight Tracker - Complete Supabase Schema
+-- ============================================
+-- This script creates all tables, views, and RLS policies
+-- Run this once in Supabase SQL Editor to set up the database correctly
+
+-- ============================================
+-- 1. REQUEST COUNTER TABLE
+-- ============================================
 CREATE TABLE IF NOT EXISTS request_count (
   id INT PRIMARY KEY DEFAULT 1,
   count INT DEFAULT 0,
   last_updated TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Initialize counter
 INSERT INTO request_count (id, count) VALUES (1, 0) ON CONFLICT (id) DO NOTHING;
 
--- Price history table
+-- Enable RLS on request_count
+ALTER TABLE request_count ENABLE ROW LEVEL SECURITY;
+
+-- Drop old policies if they exist
+DROP POLICY IF EXISTS "Allow public read" ON request_count;
+DROP POLICY IF EXISTS "Allow service role update" ON request_count;
+
+-- Create RLS policies for request_count
+CREATE POLICY "Allow public read request_count" ON request_count
+  FOR SELECT USING (true);
+
+CREATE POLICY "Allow service role update request_count" ON request_count
+  FOR UPDATE USING (true) WITH CHECK (true);
+
+-- Grant permissions
+GRANT SELECT ON public.request_count TO anon, authenticated;
+GRANT UPDATE ON public.request_count TO service_role;
+
+-- ============================================
+-- 2. PRICE HISTORY TABLE
+-- ============================================
 CREATE TABLE IF NOT EXISTS price_history (
   id BIGSERIAL PRIMARY KEY,
   origin VARCHAR(3) NOT NULL,
@@ -28,10 +57,35 @@ CREATE TABLE IF NOT EXISTS price_history (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Indexes for fast queries
-CREATE INDEX idx_price_history_route ON price_history(origin, destination);
-CREATE INDEX idx_price_history_checked_at ON price_history(checked_at DESC);
-CREATE INDEX idx_price_history_price ON price_history(price);
+-- Create indexes for fast queries
+CREATE INDEX IF NOT EXISTS idx_price_history_route ON price_history(origin, destination);
+CREATE INDEX IF NOT EXISTS idx_price_history_checked_at ON price_history(checked_at DESC);
+CREATE INDEX IF NOT EXISTS idx_price_history_price ON price_history(price);
+
+-- Enable RLS on price_history
+ALTER TABLE price_history ENABLE ROW LEVEL SECURITY;
+
+-- Drop old policies if they exist
+DROP POLICY IF EXISTS "Allow public read" ON price_history;
+DROP POLICY IF EXISTS "Allow service role insert" ON price_history;
+DROP POLICY IF EXISTS "Allow public read price_history" ON price_history;
+DROP POLICY IF EXISTS "Allow service role insert price_history" ON price_history;
+
+-- Create RLS policies for price_history
+CREATE POLICY "Allow public read price_history" ON price_history
+  FOR SELECT USING (true);
+
+CREATE POLICY "Allow service role insert price_history" ON price_history
+  FOR INSERT WITH CHECK (true);
+
+-- Grant permissions
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT SELECT ON public.price_history TO anon, authenticated;
+GRANT INSERT ON public.price_history TO service_role;
+
+-- ============================================
+-- 3. VIEWS FOR DASHBOARD
+-- ============================================
 
 -- View: Latest unique prices per route
 CREATE OR REPLACE VIEW latest_prices AS
@@ -39,6 +93,7 @@ SELECT DISTINCT ON (origin, destination)
   origin, destination, price, currency, 
   duration_outbound, duration_inbound,
   outbound_stops, inbound_stops,
+  outbound_hubs,
   checked_at,
   outbound_departure, outbound_arrival,
   inbound_departure, inbound_arrival,
@@ -60,20 +115,12 @@ WHERE checked_at > NOW() - INTERVAL '30 days'
 GROUP BY origin, destination, DATE(checked_at)
 ORDER BY origin, destination, date DESC;
 
--- Enable Row Level Security (optional, for public access)
-ALTER TABLE price_history ENABLE ROW LEVEL SECURITY;
-
--- Public read-only policy
-CREATE POLICY "Public read access" ON price_history
-  FOR SELECT USING (true);
-
--- Restrict write access to server only (authenticated as service role)
-CREATE POLICY "Service role write only" ON price_history
-  FOR INSERT USING (auth.role() = 'service_role');
-
--- Grant public read on views
+-- Grant permissions on views
 GRANT SELECT ON latest_prices TO anon, authenticated;
 GRANT SELECT ON price_trends TO anon, authenticated;
 
--- Vacuum and analyze
+-- ============================================
+-- 4. CLEANUP (Vacuum and Analyze)
+-- ============================================
 VACUUM ANALYZE price_history;
+VACUUM ANALYZE request_count;
