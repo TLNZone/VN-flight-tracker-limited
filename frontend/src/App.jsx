@@ -41,7 +41,7 @@ export default function App() {
   // Fetch flights and trends
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 30000); // Refresh every 30 seconds
+    const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, [selectedRoute]);
 
@@ -51,50 +51,28 @@ export default function App() {
       const [origin, destination] = selectedRoute.split(':');
 
       // Fetch price history
-      const { data: historyData, error: historyError } = await supabase
+      const { data: historyData } = await supabase
         .from('price_history')
         .select('*')
         .eq('origin', origin)
         .eq('destination', destination)
         .order('checked_at', { ascending: false });
 
-      if (historyError) {
-        console.error('History error:', historyError);
-        throw historyError;
-      }
-
-      const safeHistoryData = Array.isArray(historyData) ? historyData : [];
-      setFlights(safeHistoryData);
-
-      // Fetch trends
-      const { data: trendsData, error: trendsError } = await supabase
-        .from('price_trends')
-        .select('*')
-        .eq('origin', origin)
-        .eq('destination', destination)
-        .order('date', { ascending: false })
-        .limit(30);
-
-      if (trendsError) {
-        console.error('Trends error:', trendsError);
-      }
-
-      const safeTrendsData = Array.isArray(trendsData) ? trendsData : [];
-      setTrendData(safeTrendsData);
+      const safeFlights = Array.isArray(historyData) ? historyData : [];
+      setFlights(safeFlights);
 
       // Calculate stats
-      if (safeHistoryData && safeHistoryData.length > 0) {
-        const prices = safeHistoryData.map(f => f.price);
-        const uniqueDates = new Set(safeHistoryData.map(f => {
-          const dateStr = f.checked_at ? f.checked_at.split('T')[0] : '';
-          return dateStr;
-        }));
+      if (safeFlights.length > 0) {
+        const prices = safeFlights.map(f => f.price).filter(p => p);
+        const uniqueDates = new Set(
+          safeFlights.map(f => (f.checked_at ? f.checked_at.split('T')[0] : '')).filter(d => d)
+        );
 
         setStats({
-          bestPrice: Math.min(...prices),
-          averagePrice: Math.round(prices.reduce((a, b) => a + b, 0) / prices.length),
+          bestPrice: prices.length > 0 ? Math.min(...prices) : null,
+          averagePrice: prices.length > 0 ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : null,
           daysTracked: uniqueDates.size,
-          checksCompleted: safeHistoryData.length,
+          checksCompleted: safeFlights.length,
         });
       } else {
         setStats({
@@ -105,45 +83,82 @@ export default function App() {
         });
       }
 
+      // Fetch trends
+      const { data: trendsData } = await supabase
+        .from('price_trends')
+        .select('*')
+        .eq('origin', origin)
+        .eq('destination', destination)
+        .order('date', { ascending: false })
+        .limit(30);
+
+      const safeTrends = Array.isArray(trendsData) ? trendsData : [];
+      setTrendData(safeTrends);
+
       // Fetch request count
-      const { data: countData, error: countError } = await supabase
+      const { data: countData } = await supabase
         .from('request_count')
         .select('count')
         .single();
 
-      if (!countError && countData) {
-        setRequestCount(countData.count || 0);
+      if (countData && countData.count !== undefined) {
+        setRequestCount(countData.count);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
       setFlights([]);
       setTrendData([]);
+      setStats({
+        bestPrice: null,
+        averagePrice: null,
+        daysTracked: 0,
+        checksCompleted: 0,
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter and sort flights
-  const filteredFlights = (Array.isArray(flights) ? flights : [])
-    .filter(f => {
-      if (!f) return false;
-      if (filterDirect && (f.outbound_stops || 0) > 0) return false;
-      if ((f.price || 0) > maxPrice) return false;
-      if ((f.duration_outbound || 0) > maxDuration * 60) return false; // Convert hours to minutes
-      return true;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'price':
-          return (a.price || 0) - (b.price || 0);
-        case 'duration':
-          return (a.duration_outbound || 0) - (b.duration_outbound || 0);
-        case 'departure':
-          return new Date(a.outbound_departure || 0) - new Date(b.outbound_departure || 0);
-        default:
-          return 0;
-      }
-    });
+  // Filter and sort flights - with safe defaults
+  const getFilteredFlights = () => {
+    if (!Array.isArray(flights) || flights.length === 0) {
+      return [];
+    }
+
+    return flights
+      .filter(f => {
+        if (!f) return false;
+        const stops = f.outbound_stops ?? 0;
+        const price = f.price ?? 999999;
+        const duration = f.duration_outbound ?? 999999;
+
+        if (filterDirect && stops > 0) return false;
+        if (price > maxPrice) return false;
+        if (duration > maxDuration * 60) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const aPrice = a.price ?? 0;
+        const bPrice = b.price ?? 0;
+        const aDuration = a.duration_outbound ?? 0;
+        const bDuration = b.duration_outbound ?? 0;
+        const aDepart = new Date(a.outbound_departure ?? 0).getTime();
+        const bDepart = new Date(b.outbound_departure ?? 0).getTime();
+
+        switch (sortBy) {
+          case 'price':
+            return aPrice - bPrice;
+          case 'duration':
+            return aDuration - bDuration;
+          case 'departure':
+            return aDepart - bDepart;
+          default:
+            return 0;
+        }
+      });
+  };
+
+  const filteredFlights = getFilteredFlights();
 
   const clearFilters = () => {
     setFilterDirect(false);
@@ -251,7 +266,7 @@ export default function App() {
               max="5000"
               step="50"
               value={maxPrice}
-              onChange={e => setMaxPrice(parseInt(e.target.value))}
+              onChange={e => setMaxPrice(parseInt(e.target.value) || 2000)}
               className="price-input"
             />
             <span className="price-display">€{maxPrice}</span>
@@ -265,7 +280,7 @@ export default function App() {
               max="48"
               step="1"
               value={maxDuration}
-              onChange={e => setMaxDuration(parseInt(e.target.value))}
+              onChange={e => setMaxDuration(parseInt(e.target.value) || 30)}
               className="duration-input"
             />
             <span className="duration-display">{maxDuration}h</span>
