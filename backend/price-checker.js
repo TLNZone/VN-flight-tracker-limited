@@ -2,6 +2,7 @@ import ws from 'ws';
 import https from 'https';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
 
 global.WebSocket = ws;
@@ -40,17 +41,6 @@ function log(message) {
   const logMessage = `[${timestamp}] ${message}`;
   console.log(logMessage);
   fs.appendFileSync(logFile, logMessage + '\n');
-}
-
-async function initDatabase() {
-  // Create price_history table if not exists
-  const { error } = await supabase.rpc('init_schema', {});
-  if (error) {
-    log(`Note: RPC init_schema not found (first run). Creating tables manually...`);
-    
-    // Create tables directly via raw SQL would require PostgREST access
-    // For now, we'll handle errors gracefully
-  }
 }
 
 async function getRequestCount() {
@@ -191,6 +181,7 @@ async function checkPrices() {
             duration_inbound: it.inbound?.duration_minutes || null,
             outbound_stops: (it.outbound.segments?.length || 1) - 1,
             inbound_stops: (it.inbound?.segments?.length || 1) - 1,
+            outbound_hubs: hubs,
             checked_at: checkTime,
             outbound_departure: it.outbound.segments[0]?.departure_time_local,
             outbound_arrival: it.outbound.segments[it.outbound.segments.length - 1]?.arrival_time_local,
@@ -200,8 +191,7 @@ async function checkPrices() {
               [...new Set(it.outbound.segments.map(s => s.marketing_carrier_code))].concat(
                 it.inbound?.segments?.map(s => s.marketing_carrier_code) || []
               )
-            ),
-            outbound_hubs: hubs
+            )
           });
 
           if (error) {
@@ -230,7 +220,6 @@ async function checkPrices() {
 // Main execution
 (async () => {
   try {
-    await initDatabase();
     await checkPrices();
   } catch (err) {
     log(`Fatal error: ${err.message}`);
