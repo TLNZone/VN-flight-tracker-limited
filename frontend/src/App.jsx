@@ -58,9 +58,13 @@ export default function App() {
         .eq('destination', destination)
         .order('checked_at', { ascending: false });
 
-      if (historyError) throw historyError;
+      if (historyError) {
+        console.error('History error:', historyError);
+        throw historyError;
+      }
 
-      setFlights(historyData || []);
+      const safeHistoryData = Array.isArray(historyData) ? historyData : [];
+      setFlights(safeHistoryData);
 
       // Fetch trends
       const { data: trendsData, error: trendsError } = await supabase
@@ -71,20 +75,33 @@ export default function App() {
         .order('date', { ascending: false })
         .limit(30);
 
-      if (trendsError) throw trendsError;
+      if (trendsError) {
+        console.error('Trends error:', trendsError);
+      }
 
-      setTrendData(trendsData || []);
+      const safeTrendsData = Array.isArray(trendsData) ? trendsData : [];
+      setTrendData(safeTrendsData);
 
       // Calculate stats
-      if (historyData && historyData.length > 0) {
-        const prices = historyData.map(f => f.price);
-        const uniqueDates = new Set(historyData.map(f => f.checked_at.split('T')[0]));
+      if (safeHistoryData && safeHistoryData.length > 0) {
+        const prices = safeHistoryData.map(f => f.price);
+        const uniqueDates = new Set(safeHistoryData.map(f => {
+          const dateStr = f.checked_at ? f.checked_at.split('T')[0] : '';
+          return dateStr;
+        }));
 
         setStats({
           bestPrice: Math.min(...prices),
           averagePrice: Math.round(prices.reduce((a, b) => a + b, 0) / prices.length),
           daysTracked: uniqueDates.size,
-          checksCompleted: historyData.length,
+          checksCompleted: safeHistoryData.length,
+        });
+      } else {
+        setStats({
+          bestPrice: null,
+          averagePrice: null,
+          daysTracked: 0,
+          checksCompleted: 0,
         });
       }
 
@@ -95,31 +112,34 @@ export default function App() {
         .single();
 
       if (!countError && countData) {
-        setRequestCount(countData.count);
+        setRequestCount(countData.count || 0);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
+      setFlights([]);
+      setTrendData([]);
     } finally {
       setLoading(false);
     }
   };
 
   // Filter and sort flights
-  const filteredFlights = flights
+  const filteredFlights = (Array.isArray(flights) ? flights : [])
     .filter(f => {
-      if (filterDirect && f.outbound_stops > 0) return false;
-      if (f.price > maxPrice) return false;
-      if (f.duration_outbound > maxDuration * 60) return false; // Convert hours to minutes
+      if (!f) return false;
+      if (filterDirect && (f.outbound_stops || 0) > 0) return false;
+      if ((f.price || 0) > maxPrice) return false;
+      if ((f.duration_outbound || 0) > maxDuration * 60) return false; // Convert hours to minutes
       return true;
     })
     .sort((a, b) => {
       switch (sortBy) {
         case 'price':
-          return a.price - b.price;
+          return (a.price || 0) - (b.price || 0);
         case 'duration':
-          return a.duration_outbound - b.duration_outbound;
+          return (a.duration_outbound || 0) - (b.duration_outbound || 0);
         case 'departure':
-          return new Date(a.outbound_departure) - new Date(b.outbound_departure);
+          return new Date(a.outbound_departure || 0) - new Date(b.outbound_departure || 0);
         default:
           return 0;
       }
