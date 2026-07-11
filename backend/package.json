@@ -1,0 +1,15 @@
+{
+  "name": "flight-tracker-backend",
+  "version": "1.0.0",
+  "description": "Flight price checker for Ignav API",
+  "main": "price-checker.js",
+  "scripts": {
+    "check": "node price-checker.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

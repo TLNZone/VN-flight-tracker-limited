@@ -1,0 +1,407 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  background: #f9f8f6;
+  color: #0b0b0b;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e1e0d9;
+}
+
+header h1 {
+  font-size: 28px;
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+header p {
+  margin: 0.25rem 0;
+  color: #52514e;
+  font-size: 14px;
+}
+
+section {
+  background: white;
+  border: 0.5px solid #e1e0d9;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+section h2 {
+  font-size: 18px;
+  margin: 0 0 1rem;
+  font-weight: 500;
+  color: #0b0b0b;
+}
+
+footer {
+  text-align: center;
+  padding-top: 1.5rem;
+  margin-top: 2rem;
+  border-top: 1px solid #e1e0d9;
+  font-size: 13px;
+  color: #52514e;
+}
+
+footer p {
+  margin: 0.5rem 0;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.stat {
+  background: white;
+  border: 0.5px solid #e1e0d9;
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.stat .label {
+  display: block;
+  font-size: 12px;
+  color: #898781;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat .value {
+  display: block;
+  font-size: 22px;
+  font-weight: 600;
+  color: #0b0b0b;
+}
+
+.request-counter {
+  background: white;
+  border: 0.5px solid #e1e0d9;
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.request-counter.warning {
+  background: #fffbf0;
+  border-color: #fab219;
+}
+
+.request-counter.critical {
+  background: #fce8e8;
+  border-color: #d03b3b;
+}
+
+.counter-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0.75rem;
+  font-size: 14px;
+}
+
+.counter-text strong {
+  font-size: 16px;
+  color: #0b0b0b;
+}
+
+.counter-text .remaining {
+  color: #898781;
+  font-size: 13px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: #e1e0d9;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+  border-radius: 4px;
+}
+
+.route-selector {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+.route-selector button {
+  padding: 0.75rem 1rem;
+  border: 0.5px solid #e1e0d9;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.route-selector button:hover {
+  background: #fcfcfb;
+  border-color: #c3c2b7;
+}
+
+.route-selector button.active {
+  background: #2a78d6;
+  color: white;
+  border-color: #2a78d6;
+}
+
+.controls-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+
+.sort-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.sort-controls button {
+  padding: 0.5rem 1rem;
+  border: 0.5px solid #e1e0d9;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+  color: #52514e;
+}
+
+.sort-controls button:hover {
+  background: #fcfcfb;
+  border-color: #c3c2b7;
+}
+
+.sort-controls button.active {
+  background: #2a78d6;
+  color: white;
+  border-color: #2a78d6;
+}
+
+.filter-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #52514e;
+  user-select: none;
+}
+
+.filter-checkbox input {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+
+.price-input {
+  padding: 0.5rem 0.75rem;
+  border: 0.5px solid #e1e0d9;
+  border-radius: 6px;
+  font-size: 13px;
+  width: 140px;
+  transition: all 0.2s;
+}
+
+.price-input:focus {
+  outline: none;
+  border-color: #2a78d6;
+  box-shadow: 0 0 0 2px rgba(42, 120, 214, 0.1);
+}
+
+.clear-filters {
+  padding: 0.5rem 0.75rem;
+  border: 0.5px solid #d03b3b;
+  background: #fce8e8;
+  color: #d03b3b;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.clear-filters:hover {
+  background: #fab3b3;
+  border-color: #a02d2d;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.price-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.price-table th {
+  background: #fcfcfb;
+  border-bottom: 1px solid #e1e0d9;
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 500;
+  color: #52514e;
+  position: sticky;
+  top: 0;
+}
+
+.price-table td {
+  border-bottom: 0.5px solid #e1e0d9;
+  padding: 0.75rem;
+  color: #0b0b0b;
+}
+
+.price-table tr:hover {
+  background: #fcfcfb;
+}
+
+.price-table tr.best-price {
+  background: #eaf3de;
+}
+
+.price-table tr.best-price td {
+  color: #173404;
+}
+
+.price-table .price {
+  font-weight: 600;
+  color: #0c447c;
+  min-width: 80px;
+}
+
+.price-table .per-person {
+  font-size: 11px;
+  font-weight: 400;
+  color: #52514e;
+  margin-left: 2px;
+}
+
+.price-table .time {
+  font-size: 12px;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  line-height: 1.4;
+  min-width: 100px;
+}
+
+.price-table .duration {
+  font-weight: 500;
+  min-width: 70px;
+}
+
+.price-table .stops {
+  min-width: 80px;
+}
+
+.price-table .return {
+  font-size: 12px;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  line-height: 1.4;
+  min-width: 100px;
+}
+
+.price-table .airlines {
+  font-size: 12px;
+  font-weight: 500;
+  min-width: 80px;
+}
+
+.price-table .notes {
+  font-size: 11px;
+  color: #898781;
+  min-width: 120px;
+}
+
+.note {
+  display: block;
+  margin: 2px 0;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem 0.5rem;
+  }
+
+  section {
+    padding: 1rem;
+  }
+
+  header h1 {
+    font-size: 22px;
+  }
+
+  .stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .route-selector {
+    grid-template-columns: 1fr;
+  }
+
+  .controls-wrapper {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .sort-controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .filter-controls {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .price-input {
+    width: 100%;
+  }
+
+  .price-table {
+    font-size: 12px;
+  }
+
+  .price-table th,
+  .price-table td {
+    padding: 0.5rem;
+  }
+}
