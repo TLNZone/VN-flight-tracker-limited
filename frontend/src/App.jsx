@@ -38,9 +38,10 @@ export default function App() {
     { code: 'FRA:DAD', label: 'Frankfurt → Da Nang' },
   ];
 
+  // Fetch flights and trends
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 30000);
+    const interval = setInterval(fetchData, 30000); // Refresh every 30 seconds
     return () => clearInterval(interval);
   }, [selectedRoute]);
 
@@ -49,43 +50,20 @@ export default function App() {
     try {
       const [origin, destination] = selectedRoute.split(':');
 
-      const { data: historyData } = await supabase
+      // Fetch price history
+      const { data: historyData, error: historyError } = await supabase
         .from('price_history')
         .select('*')
         .eq('origin', origin)
         .eq('destination', destination)
         .order('checked_at', { ascending: false });
 
-      const safeFlights = historyData && Array.isArray(historyData) ? historyData : [];
-      setFlights(safeFlights);
+      if (historyError) throw historyError;
 
-      if (safeFlights && safeFlights.length > 0) {
-        const prices = safeFlights.map(f => f.price).filter(p => typeof p === 'number');
-        const uniqueDates = new Set(
-          safeFlights.map(f => {
-            if (f && f.checked_at) {
-              return f.checked_at.split('T')[0];
-            }
-            return null;
-          }).filter(d => d !== null)
-        );
+      setFlights(historyData || []);
 
-        setStats({
-          bestPrice: prices.length > 0 ? Math.min(...prices) : null,
-          averagePrice: prices.length > 0 ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : null,
-          daysTracked: uniqueDates.size,
-          checksCompleted: safeFlights.length,
-        });
-      } else {
-        setStats({
-          bestPrice: null,
-          averagePrice: null,
-          daysTracked: 0,
-          checksCompleted: 0,
-        });
-      }
-
-      const { data: trendsData } = await supabase
+      // Fetch trends
+      const { data: trendsData, error: trendsError } = await supabase
         .from('price_trends')
         .select('*')
         .eq('origin', origin)
@@ -93,65 +71,59 @@ export default function App() {
         .order('date', { ascending: false })
         .limit(30);
 
-      const safeTrends = trendsData && Array.isArray(trendsData) ? trendsData : [];
-      setTrendData(safeTrends);
+      if (trendsError) throw trendsError;
 
-      const { data: countData } = await supabase
+      setTrendData(trendsData || []);
+
+      // Calculate stats
+      if (historyData && historyData.length > 0) {
+        const prices = historyData.map(f => f.price);
+        const uniqueDates = new Set(historyData.map(f => f.checked_at.split('T')[0]));
+
+        setStats({
+          bestPrice: Math.min(...prices),
+          averagePrice: Math.round(prices.reduce((a, b) => a + b, 0) / prices.length),
+          daysTracked: uniqueDates.size,
+          checksCompleted: historyData.length,
+        });
+      }
+
+      // Fetch request count
+      const { data: countData, error: countError } = await supabase
         .from('request_count')
         .select('count')
         .single();
 
-      if (countData && typeof countData.count === 'number') {
+      if (!countError && countData) {
         setRequestCount(countData.count);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
-      setFlights([]);
-      setTrendData([]);
-      setStats({
-        bestPrice: null,
-        averagePrice: null,
-        daysTracked: 0,
-        checksCompleted: 0,
-      });
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredFlights = (() => {
-    if (!flights || !Array.isArray(flights) || flights.length === 0) {
-      return [];
-    }
-
-    const filtered = flights.filter(f => {
-      if (!f || typeof f !== 'object') return false;
-      const stops = Number(f.outbound_stops) || 0;
-      const price = Number(f.price) || 999999;
-      const duration = Number(f.duration_outbound) || 999999;
-
-      if (filterDirect && stops > 0) return false;
-      if (price > maxPrice) return false;
-      if (duration > maxDuration * 60) return false;
+  // Filter and sort flights
+  const filteredFlights = flights
+    .filter(f => {
+      if (filterDirect && f.outbound_stops > 0) return false;
+      if (f.price > maxPrice) return false;
+      if (f.duration_outbound > maxDuration * 60) return false; // Convert hours to minutes
       return true;
-    });
-
-    return filtered.sort((a, b) => {
+    })
+    .sort((a, b) => {
       switch (sortBy) {
         case 'price':
-          return (Number(a.price) || 0) - (Number(b.price) || 0);
+          return a.price - b.price;
         case 'duration':
-          return (Number(a.duration_outbound) || 0) - (Number(b.duration_outbound) || 0);
-        case 'departure': {
-          const aTime = a.outbound_departure ? new Date(a.outbound_departure).getTime() : 0;
-          const bTime = b.outbound_departure ? new Date(b.outbound_departure).getTime() : 0;
-          return aTime - bTime;
-        }
+          return a.duration_outbound - b.duration_outbound;
+        case 'departure':
+          return new Date(a.outbound_departure) - new Date(b.outbound_departure);
         default:
           return 0;
       }
     });
-  })();
 
   const clearFilters = () => {
     setFilterDirect(false);
@@ -170,6 +142,7 @@ export default function App() {
 
       <RequestCounter count={requestCount} />
 
+      {/* Stats Cards */}
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-value">
@@ -193,15 +166,13 @@ export default function App() {
         </div>
       </div>
 
+      {/* Price Trends Chart */}
       <div className="chart-section">
         <h2>Price Trends</h2>
-        {trendData && trendData.length > 0 ? (
-          <PriceChart data={trendData} />
-        ) : (
-          <p className="no-data">No trend data available yet.</p>
-        )}
+        <PriceChart data={trendData} />
       </div>
 
+      {/* Route Selector */}
       <div className="routes-section">
         <h2>Select Route</h2>
         <div className="routes-grid">
@@ -217,6 +188,7 @@ export default function App() {
         </div>
       </div>
 
+      {/* Sort and Filter Controls */}
       <div className="controls-wrapper">
         <div className="sort-controls">
           <label>Sort by:</label>
@@ -259,7 +231,7 @@ export default function App() {
               max="5000"
               step="50"
               value={maxPrice}
-              onChange={e => setMaxPrice(Math.max(100, parseInt(e.target.value) || 2000))}
+              onChange={e => setMaxPrice(parseInt(e.target.value))}
               className="price-input"
             />
             <span className="price-display">€{maxPrice}</span>
@@ -273,7 +245,7 @@ export default function App() {
               max="48"
               step="1"
               value={maxDuration}
-              onChange={e => setMaxDuration(Math.max(1, parseInt(e.target.value) || 30))}
+              onChange={e => setMaxDuration(parseInt(e.target.value))}
               className="duration-input"
             />
             <span className="duration-display">{maxDuration}h</span>
@@ -287,16 +259,17 @@ export default function App() {
         </div>
       </div>
 
+      {/* Flights Table */}
       <div className="table-section">
         <h2>
           Available Flights
-          {filteredFlights && filteredFlights.length > 0 && ` (${filteredFlights.length})`}
+          {filteredFlights.length > 0 && ` (${filteredFlights.length})`}
         </h2>
         {loading ? (
           <p className="loading">Loading...</p>
-        ) : filteredFlights && filteredFlights.length > 0 ? (
+        ) : filteredFlights.length > 0 ? (
           <PriceTable flights={filteredFlights} />
-        ) : flights && flights.length > 0 ? (
+        ) : flights.length > 0 ? (
           <p className="no-results">
             No flights match your filters. Try adjusting price or duration limits.
           </p>
