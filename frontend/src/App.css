@@ -1,407 +1,423 @@
+/* ============================================
+   Flight Tracker Dashboard - Styling
+   ============================================ */
+
 * {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
-  background: #f9f8f6;
-  color: #0b0b0b;
-  margin: 0;
-  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #333;
+  line-height: 1.6;
 }
 
-.container {
+.app-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: 20px;
 }
 
-header {
-  text-align: center;
-  margin-bottom: 2rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid #e1e0d9;
-}
+/* ============================================
+   Header
+   ============================================ */
 
-header h1 {
-  font-size: 28px;
-  margin: 0 0 0.5rem;
-  font-weight: 600;
-}
-
-header p {
-  margin: 0.25rem 0;
-  color: #52514e;
-  font-size: 14px;
-}
-
-section {
+.header {
   background: white;
-  border: 0.5px solid #e1e0d9;
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-}
-
-section h2 {
-  font-size: 18px;
-  margin: 0 0 1rem;
-  font-weight: 500;
-  color: #0b0b0b;
-}
-
-footer {
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
   text-align: center;
-  padding-top: 1.5rem;
-  margin-top: 2rem;
-  border-top: 1px solid #e1e0d9;
-  font-size: 13px;
-  color: #52514e;
 }
 
-footer p {
-  margin: 0.5rem 0;
+.header h1 {
+  font-size: 32px;
+  margin-bottom: 8px;
+  color: #333;
 }
 
-.stats-row {
+.header p {
+  color: #666;
+  font-size: 16px;
+}
+
+/* ============================================
+   Stats Grid
+   ============================================ */
+
+.stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
-  margin-bottom: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 30px;
 }
 
-.stat {
+.stat-card {
   background: white;
-  border: 0.5px solid #e1e0d9;
+  padding: 20px;
   border-radius: 8px;
-  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   text-align: center;
 }
 
-.stat .label {
-  display: block;
+.stat-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #667eea;
+  margin-bottom: 8px;
+}
+
+.stat-label {
   font-size: 12px;
-  color: #898781;
-  margin-bottom: 0.5rem;
+  color: #999;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.stat .value {
-  display: block;
-  font-size: 22px;
-  font-weight: 600;
-  color: #0b0b0b;
-}
+/* ============================================
+   Chart Section
+   ============================================ */
 
-.request-counter {
+.chart-section {
   background: white;
-  border: 0.5px solid #e1e0d9;
-  border-radius: 8px;
-  padding: 1rem 1.5rem;
-  margin-bottom: 1.5rem;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
 }
 
-.request-counter.warning {
-  background: #fffbf0;
-  border-color: #fab219;
+.chart-section h2 {
+  font-size: 20px;
+  margin-bottom: 16px;
+  color: #333;
 }
 
-.request-counter.critical {
-  background: #fce8e8;
-  border-color: #d03b3b;
+/* ============================================
+   Routes Section
+   ============================================ */
+
+.routes-section {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
 }
 
-.counter-text {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 0.75rem;
-  font-size: 14px;
+.routes-section h2 {
+  font-size: 20px;
+  margin-bottom: 16px;
+  color: #333;
 }
 
-.counter-text strong {
-  font-size: 16px;
-  color: #0b0b0b;
-}
-
-.counter-text .remaining {
-  color: #898781;
-  font-size: 13px;
-}
-
-.progress-bar {
-  width: 100%;
-  height: 8px;
-  background: #e1e0d9;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  transition: width 0.3s ease;
-  border-radius: 4px;
-}
-
-.route-selector {
+.routes-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
-  margin-bottom: 1rem;
-  width: 100%;
 }
 
-.route-selector button {
-  padding: 0.75rem 1rem;
-  border: 0.5px solid #e1e0d9;
+.route-button {
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
   background: white;
-  border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
-  transition: all 0.2s;
+  font-weight: 500;
+  transition: all 0.3s ease;
 }
 
-.route-selector button:hover {
-  background: #fcfcfb;
-  border-color: #c3c2b7;
+.route-button:hover {
+  border-color: #667eea;
+  background: #f5f5f5;
 }
 
-.route-selector button.active {
-  background: #2a78d6;
+.route-button.active {
+  border-color: #667eea;
+  background: #667eea;
   color: white;
-  border-color: #2a78d6;
 }
+
+/* ============================================
+   Controls (Sort & Filter)
+   ============================================ */
 
 .controls-wrapper {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  align-items: center;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .sort-controls {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.sort-controls button {
-  padding: 0.5rem 1rem;
-  border: 0.5px solid #e1e0d9;
-  background: white;
+.sort-controls label {
+  font-weight: 600;
+  color: #333;
+}
+
+.sort-button {
+  padding: 8px 16px;
+  border: 1px solid #e0e0e0;
   border-radius: 6px;
+  background: white;
   cursor: pointer;
   font-size: 13px;
-  transition: all 0.2s;
-  color: #52514e;
+  transition: all 0.3s ease;
 }
 
-.sort-controls button:hover {
-  background: #fcfcfb;
-  border-color: #c3c2b7;
+.sort-button:hover {
+  border-color: #667eea;
+  background: #f5f5f5;
 }
 
-.sort-controls button.active {
-  background: #2a78d6;
+.sort-button.active {
+  background: #667eea;
   color: white;
-  border-color: #2a78d6;
+  border-color: #667eea;
 }
 
 .filter-controls {
   display: flex;
-  gap: 12px;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.filter-controls label {
+  display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  gap: 8px;
+  font-weight: 500;
+  color: #333;
 }
 
 .filter-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.price-filter,
+.duration-filter {
   display: flex;
   align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  color: #52514e;
-  user-select: none;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-.filter-checkbox input {
-  cursor: pointer;
-  width: 16px;
-  height: 16px;
+.price-input,
+.duration-input {
+  width: 80px;
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
 }
 
-.price-input {
-  padding: 0.5rem 0.75rem;
-  border: 0.5px solid #e1e0d9;
-  border-radius: 6px;
-  font-size: 13px;
-  width: 140px;
-  transition: all 0.2s;
-}
-
-.price-input:focus {
+.price-input:focus,
+.duration-input:focus {
   outline: none;
-  border-color: #2a78d6;
-  box-shadow: 0 0 0 2px rgba(42, 120, 214, 0.1);
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.price-display,
+.duration-display {
+  font-weight: 600;
+  color: #667eea;
+  min-width: 50px;
 }
 
 .clear-filters {
-  padding: 0.5rem 0.75rem;
-  border: 0.5px solid #d03b3b;
-  background: #fce8e8;
-  color: #d03b3b;
+  width: fit-content;
+  padding: 8px 16px;
+  background: #ff6b6b;
+  color: white;
+  border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 13px;
-  transition: all 0.2s;
+  font-weight: 600;
+  transition: all 0.3s ease;
 }
 
 .clear-filters:hover {
-  background: #fab3b3;
-  border-color: #a02d2d;
+  background: #ff5252;
+  transform: translateY(-2px);
 }
 
-.table-wrapper {
-  overflow-x: auto;
+/* ============================================
+   Table Section
+   ============================================ */
+
+.table-section {
+  background: white;
+  padding: 24px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
 }
 
-.price-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
+.table-section h2 {
+  font-size: 20px;
+  margin-bottom: 16px;
+  color: #333;
 }
 
-.price-table th {
-  background: #fcfcfb;
-  border-bottom: 1px solid #e1e0d9;
-  padding: 0.75rem;
-  text-align: left;
-  font-weight: 500;
-  color: #52514e;
-  position: sticky;
-  top: 0;
+.loading,
+.no-data,
+.no-results {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+  font-size: 16px;
 }
 
-.price-table td {
-  border-bottom: 0.5px solid #e1e0d9;
-  padding: 0.75rem;
-  color: #0b0b0b;
+.no-results {
+  color: #ff6b6b;
 }
 
-.price-table tr:hover {
-  background: #fcfcfb;
+/* ============================================
+   Footer
+   ============================================ */
+
+.footer {
+  text-align: center;
+  padding: 20px;
+  color: white;
+  font-size: 12px;
+  line-height: 1.8;
 }
 
-.price-table tr.best-price {
-  background: #eaf3de;
+/* ============================================
+   Request Counter (in header)
+   ============================================ */
+
+.request-counter {
+  background: white;
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  text-align: center;
+  font-size: 12px;
+  color: #666;
 }
 
-.price-table tr.best-price td {
-  color: #173404;
-}
-
-.price-table .price {
+.request-counter strong {
+  color: #667eea;
   font-weight: 600;
-  color: #0c447c;
-  min-width: 80px;
 }
 
-.price-table .per-person {
-  font-size: 11px;
-  font-weight: 400;
-  color: #52514e;
-  margin-left: 2px;
+.request-counter.warning {
+  background: #fff3cd;
+  color: #856404;
 }
 
-.price-table .time {
-  font-size: 12px;
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
-  line-height: 1.4;
-  min-width: 100px;
+.request-counter.danger {
+  background: #f8d7da;
+  color: #721c24;
 }
 
-.price-table .duration {
-  font-weight: 500;
-  min-width: 70px;
-}
-
-.price-table .stops {
-  min-width: 80px;
-}
-
-.price-table .return {
-  font-size: 12px;
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
-  line-height: 1.4;
-  min-width: 100px;
-}
-
-.price-table .airlines {
-  font-size: 12px;
-  font-weight: 500;
-  min-width: 80px;
-}
-
-.price-table .notes {
-  font-size: 11px;
-  color: #898781;
-  min-width: 120px;
-}
-
-.note {
-  display: block;
-  margin: 2px 0;
-}
+/* ============================================
+   Responsive Design
+   ============================================ */
 
 @media (max-width: 768px) {
-  .container {
-    padding: 1rem 0.5rem;
+  .app-container {
+    padding: 12px;
   }
 
-  section {
-    padding: 1rem;
+  .header {
+    padding: 20px;
   }
 
-  header h1 {
-    font-size: 22px;
+  .header h1 {
+    font-size: 24px;
   }
 
-  .stats-row {
+  .header p {
+    font-size: 14px;
+  }
+
+  .stats-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
 
-  .route-selector {
+  .routes-grid {
     grid-template-columns: 1fr;
+    gap: 10px;
   }
 
   .controls-wrapper {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
+    padding: 16px;
+    gap: 16px;
   }
 
   .sort-controls {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .sort-button {
     width: 100%;
-    justify-content: flex-start;
   }
 
   .filter-controls {
-    width: 100%;
+    gap: 12px;
+  }
+
+  .filter-controls label {
     flex-direction: column;
     align-items: flex-start;
+    gap: 4px;
   }
 
-  .price-input {
+  .price-input,
+  .duration-input {
     width: 100%;
   }
 
-  .price-table {
-    font-size: 12px;
+  .table-section {
+    padding: 12px;
   }
 
-  .price-table th,
-  .price-table td {
-    padding: 0.5rem;
+  .table-section table {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header h1 {
+    font-size: 20px;
+  }
+
+  .stat-value {
+    font-size: 20px;
+  }
+
+  .controls-wrapper {
+    padding: 12px;
+  }
+
+  .sort-controls label {
+    display: none;
+  }
+
+  .filter-controls label {
+    font-size: 13px;
   }
 }
