@@ -1,10 +1,10 @@
 import ws from 'ws';
-global.WebSocket = ws;
+import https from 'https';
+import fs from 'fs';
+import path from 'path';
+import { createClient } from '@supabase/supabase-js';
 
-const https = require('https');
-const fs = require('fs');
-const path = require('path');
-const { createClient } = require('@supabase/supabase-js');
+global.WebSocket = ws;
 
 const IGNAV_API_KEY = process.env.IGNAV_API_KEY;
 const SUPABASE_URL = process.env.SUPABASE_URL;
