@@ -140,7 +140,7 @@ export default function App() {
         <p>Salzburg, Munich, Vienna, Frankfurt → Da Nang, Vietnam</p>
       </header>
 
-      <RequestCounter count={requestCount} />
+      <RequestCounter count={requestCount} limit={980} />
 
       {/* Stats Cards */}
       <div className="stats-grid">
@@ -169,7 +169,7 @@ export default function App() {
       {/* Price Trends Chart */}
       <div className="chart-section">
         <h2>Price Trends</h2>
-        <PriceChart data={trendData} />
+        <PriceChart trends={trendData} routeKey={selectedRoute} />
       </div>
 
       {/* Route Selector */}
