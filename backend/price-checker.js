@@ -6,6 +6,9 @@ import { createClient } from '@supabase/supabase-js';
 
 global.WebSocket = ws;
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const IGNAV_API_KEY = process.env.IGNAV_API_KEY;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
