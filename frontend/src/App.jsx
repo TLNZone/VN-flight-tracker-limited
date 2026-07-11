@@ -128,7 +128,7 @@ export default function App() {
   const clearFilters = () => {
     setFilterDirect(false);
     setMaxPrice(2000);
-    setMaxDuration(30);
+    setMaxDuration(26);
   };
 
   const hasActiveFilters = filterDirect || maxPrice < 2000 || maxDuration < 30;
