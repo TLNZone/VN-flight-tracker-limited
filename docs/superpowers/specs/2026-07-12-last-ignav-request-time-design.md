@@ -16,24 +16,18 @@ Surface the timestamp of the most recent actual Ignav API call on the frontend, 
 
 ### 1. Database
 
-Add a nullable column to the existing single-row `request_count` table:
-
-```sql
-alter table request_count add column last_checked_at timestamptz;
-```
-
-No new table needed — this table already exists solely to hold the running request count (`id = 1`) that the frontend reads today.
+No migration needed. `supabase-schema.sql` already defines `request_count.last_updated timestamptz default now()`, but `price-checker.js` never writes to it, so it's frozen at whatever moment the row was first created (Postgres does not auto-refresh a `DEFAULT NOW()` column on `UPDATE`). This work reuses that existing column instead of adding a new one.
 
 ### 2. Backend (`backend/price-checker.js`)
 
 In `checkPrices()`, track whether at least one Ignav request was actually attempted this run (i.e. `makeIgnavRequest` resolved, regardless of HTTP status or whether itineraries matched filters — this already corresponds to the existing per-route `requestCount++`).
 
-- If the run exits early because `requestCount >= SAFETY_MARGIN` (no requests attempted), `last_checked_at` is left untouched — correctly reflecting that no Ignav call happened.
-- If one or more requests were attempted, update `last_checked_at` to the current time in the same `request_count` update call that already persists the running `count` (in `incrementRequestCount`), avoiding an extra DB round trip.
+- If the run exits early because `requestCount >= SAFETY_MARGIN` (no requests attempted), `last_updated` is left untouched — correctly reflecting that no Ignav call happened.
+- If one or more requests were attempted, set `last_updated` to the current time in the same `request_count` update call that already persists the running `count` (in `incrementRequestCount`), avoiding an extra DB round trip.
 
 ### 3. Frontend
 
-`App.jsx` already queries the `request_count` table for `count` in `fetchData()`. Extend that `select` to also fetch `last_checked_at`, and pass it into `RequestCounter` as a new prop.
+`App.jsx` already queries the `request_count` table for `count` in `fetchData()`. Extend that `select` to also fetch `last_updated`, and pass it into `RequestCounter` as a new prop.
 
 `RequestCounter.jsx` renders a new line near the existing `{used}/{limit} requests used` text, e.g. "Last request: 3 minutes ago" (relative time, computed client-side from the ISO timestamp). If `last_checked_at` is `null` (fresh DB, never checked), show "Last request: never".
 
@@ -46,5 +40,5 @@ No access gating needed — this is read-only informational data, safe to show t
 
 ## Testing
 
-- Manual: trigger `price-checker.yml` via GitHub Actions "Run workflow", confirm `last_checked_at` updates in Supabase and the frontend reflects it within the existing 30s poll interval.
-- Manual: verify a run that hits `SAFETY_MARGIN` before any request leaves `last_checked_at` unchanged.
+- Manual: trigger `price-checker.yml` via GitHub Actions "Run workflow", confirm `last_updated` updates in Supabase and the frontend reflects it within the existing 30s poll interval.
+- Manual: verify a run that hits `SAFETY_MARGIN` before any request leaves `last_updated` unchanged.
