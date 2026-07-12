@@ -16,8 +16,9 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const SAFETY_MARGIN = parseInt(process.env.SAFETY_MARGIN || '980');
 const MAX_PRICE = parseInt(process.env.MAX_PRICE || '6000');
 const MAX_DURATION = parseInt(process.env.MAX_DURATION || '26');
-const MAX_STOPS_DEFAULT = parseInt(process.env.MAX_STOPS_DEFAULT || '1');
-const MAX_STOPS_SALZBURG = parseInt(process.env.MAX_STOPS_SALZBURG || '2');
+const MAX_STOPS = parseInt(process.env.MAX_STOPS || '2');
+const ADULTS = parseInt(process.env.ADULTS || '2');
+const CHILDREN = parseInt(process.env.CHILDREN || '2');
 
 // Parse routes (e.g., "SZG:DAD,MUC:DAD,VIE:DAD,FRA:DAD")
 const routes = process.env.ROUTES.split(',').map(r => {
@@ -67,16 +68,18 @@ async function incrementRequestCount(amount) {
   }
 }
 
-function makeIgnavRequest(origin, destination, departureDate, returnDate, maxStops) {
+function makeIgnavRequest(origin, destination, departureDate, returnDate) {
   return new Promise((resolve, reject) => {
     const payload = {
       origin,
       destination,
       departure_date: departureDate,
       return_date: returnDate,
-      max_stops: maxStops,
+      max_stops: MAX_STOPS,
+      adults: ADULTS,
+      children: CHILDREN,
       cabin_class: 'economy',
-      market: 'DE' 
+      market: 'DE'
     };
     log(`Ignav payload: ${JSON.stringify(payload)}`);
     const options = {
@@ -134,22 +137,19 @@ async function checkPrices() {
   let checkTime = new Date().toISOString();
 
   for (const route of routes) {
-    const maxStops = route.origin === 'SZG' ? MAX_STOPS_SALZBURG : MAX_STOPS_DEFAULT;
-    
     if (requestCount + 1 > SAFETY_MARGIN) {
       log(`Stopping: only ${SAFETY_MARGIN - requestCount} requests left.`);
       break;
     }
 
     try {
-      log(`Checking: ${route.origin} → ${route.destination} (max ${maxStops} stops)`);
-      
+      log(`Checking: ${route.origin} → ${route.destination} (max ${MAX_STOPS} stops)`);
+
       const result = await makeIgnavRequest(
         route.origin,
         route.destination,
         OUTBOUND_DATE,
-        RETURN_DATE,
-        maxStops
+        RETURN_DATE
       );
 
       requestCount++;
