@@ -76,7 +76,7 @@ function makeIgnavRequest(origin, destination, departureDate, returnDate, maxSto
       return_date: returnDate,
       max_stops: maxStops,
       cabin_class: 'economy',
-      market: 'DE'  // Germany
+      // market: 'DE'  // Germany
     };
 
     const options = {
