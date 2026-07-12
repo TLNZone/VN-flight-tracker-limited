@@ -14,7 +14,7 @@ const IGNAV_API_KEY = process.env.IGNAV_API_KEY;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const SAFETY_MARGIN = parseInt(process.env.SAFETY_MARGIN || '980');
-const MAX_PRICE = parseInt(process.env.MAX_PRICE || '2000');
+const MAX_PRICE = parseInt(process.env.MAX_PRICE || '6000');
 const MAX_DURATION = parseInt(process.env.MAX_DURATION || '26');
 const MAX_STOPS_DEFAULT = parseInt(process.env.MAX_STOPS_DEFAULT || '1');
 const MAX_STOPS_SALZBURG = parseInt(process.env.MAX_STOPS_SALZBURG || '2');
@@ -76,9 +76,9 @@ function makeIgnavRequest(origin, destination, departureDate, returnDate, maxSto
       return_date: returnDate,
       max_stops: maxStops,
       cabin_class: 'economy',
-      // market: 'DE'  // Germany
+      market: 'DE' 
     };
-
+      log(`Ignav payload: ${payload}`);
     const options = {
       hostname: 'ignav.com',
       path: '/api/fares/round-trip',
