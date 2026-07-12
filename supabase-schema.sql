@@ -24,6 +24,8 @@ ALTER TABLE request_count ENABLE ROW LEVEL SECURITY;
 -- Drop old policies if they exist
 DROP POLICY IF EXISTS "Allow public read" ON request_count;
 DROP POLICY IF EXISTS "Allow service role update" ON request_count;
+DROP POLICY IF EXISTS "Allow public read request_count" ON request_count;
+DROP POLICY IF EXISTS "Allow service role update request_count" ON request_count;
 
 -- Create RLS policies for request_count
 CREATE POLICY "Allow public read request_count" ON request_count
