@@ -28,6 +28,9 @@ const routes = process.env.ROUTES.split(',').map(r => {
 
 const OUTBOUND_DATES = process.env.OUTBOUND_DATE.split(',').map(d => d.trim());
 const RETURN_DATES = process.env.RETURN_DATE.split(',').map(d => d.trim());
+// Check the latest return date first — if that outbound leg has no availability at
+// all, the earlier return dates won't either, so skip them and save the request.
+const RETURN_DATES_CHECK_ORDER = [...RETURN_DATES].reverse();
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -139,80 +142,103 @@ async function checkPrices() {
   routeLoop:
   for (const route of routes) {
     for (const departureDate of OUTBOUND_DATES) {
-    for (const returnDate of RETURN_DATES) {
-      if (requestCount + 1 > SAFETY_MARGIN) {
-        log(`Stopping: only ${SAFETY_MARGIN - requestCount} requests left.`);
-        break routeLoop;
-      }
+      let departureHasNoFlights = false;
 
-      try {
-        log(`Checking: ${route.origin} → ${route.destination} (max ${MAX_STOPS} stops, depart ${departureDate}, return ${returnDate})`);
+      for (let i = 0; i < RETURN_DATES_CHECK_ORDER.length; i++) {
+        const returnDate = RETURN_DATES_CHECK_ORDER[i];
 
-        const result = await makeIgnavRequest(
-          route.origin,
-          route.destination,
-          departureDate,
-          returnDate
-        );
-
-        requestCount++;
-
-        if (result.status === 200 && result.data.itineraries) {
-          log(`  Ignav returned ${result.data.itineraries.length} itineraries before filtering`);
-
-          const itineraries = result.data.itineraries
-            .filter(it =>
-              it.price.amount <= MAX_PRICE &&
-              it.outbound.duration_minutes <= MAX_DURATION * 60
-            )
-            .sort((a, b) => a.price.amount - b.price.amount)
-            .slice(0, 5); // Keep top 5
-
-          log(`  Found ${itineraries.length} itineraries matching criteria`);
-
-          for (const it of itineraries) {
-            // Extract hub airports (connection points)
-            const outboundSegments = it.outbound.segments || [];
-            const hubs = outboundSegments.length > 1
-              ? outboundSegments.slice(0, -1).map(s => s.arrival_airport || s.arrival_iata).join(', ')
-              : null;
-
-            const { error } = await supabase.from('price_history').insert({
-              origin: route.origin,
-              destination: route.destination,
-              price: it.price.amount,
-              currency: it.price.currency,
-              duration_outbound: it.outbound.duration_minutes,
-              duration_inbound: it.inbound?.duration_minutes || null,
-              outbound_stops: (it.outbound.segments?.length || 1) - 1,
-              inbound_stops: (it.inbound?.segments?.length || 1) - 1,
-              outbound_hubs: hubs,
-              checked_at: checkTime,
-              outbound_departure: it.outbound.segments[0]?.departure_time_local,
-              outbound_arrival: it.outbound.segments[it.outbound.segments.length - 1]?.arrival_time_local,
-              inbound_departure: it.inbound?.segments[0]?.departure_time_local,
-              inbound_arrival: it.inbound?.segments[it.inbound.segments.length - 1]?.arrival_time_local,
-              airlines: JSON.stringify(
-                [...new Set(it.outbound.segments.map(s => s.marketing_carrier_code))].concat(
-                  it.inbound?.segments?.map(s => s.marketing_carrier_code) || []
-                )
-              )
-            });
-
-            if (error) {
-              log(`  ⚠️  Database insert failed: ${error.message}`);
-            }
-          }
-          successCount++;
-
-        } else {
-          log(`  ⚠️  API error (${result.status}): ${result.body.substring(0, 100)}`);
+        if (departureHasNoFlights) {
+          log(`  Skipping return ${returnDate}: no itineraries found for ${route.origin}→${route.destination} on ${departureDate}`);
+          continue;
         }
 
-      } catch (err) {
-        log(`  ❌ Error checking ${route.origin}→${route.destination} (depart ${departureDate}, return ${returnDate}): ${err.message}`);
+        if (requestCount + 1 > SAFETY_MARGIN) {
+          log(`Stopping: only ${SAFETY_MARGIN - requestCount} requests left.`);
+          break routeLoop;
+        }
+
+        try {
+          log(`Checking: ${route.origin} → ${route.destination} (max ${MAX_STOPS} stops, depart ${departureDate}, return ${returnDate})`);
+
+          const result = await makeIgnavRequest(
+            route.origin,
+            route.destination,
+            departureDate,
+            returnDate
+          );
+
+          requestCount++;
+
+          if (result.status === 200 && result.data.itineraries) {
+            const rawItineraries = result.data.itineraries;
+            log(`  Ignav returned ${rawItineraries.length} itineraries before filtering`);
+
+            if (i === 0 && rawItineraries.length === 0) {
+              departureHasNoFlights = true;
+            }
+
+            const passesFilter = it =>
+              it.price.amount <= MAX_PRICE &&
+              it.outbound.duration_minutes <= MAX_DURATION * 60;
+
+            const itineraries = rawItineraries
+              .filter(passesFilter)
+              .sort((a, b) => a.price.amount - b.price.amount)
+              .slice(0, 5); // Keep top 5
+
+            log(`  Found ${itineraries.length} itineraries matching criteria`);
+
+            const omitted = rawItineraries.filter(it => !passesFilter(it));
+            if (omitted.length > 0) {
+              const details = omitted
+                .map(it => `€${it.price.amount} (${Math.round(it.outbound.duration_minutes / 60)}h)`)
+                .join(', ');
+              log(`  Omitted ${omitted.length} by filter: ${details}`);
+            }
+
+            for (const it of itineraries) {
+              // Extract hub airports (connection points)
+              const outboundSegments = it.outbound.segments || [];
+              const hubs = outboundSegments.length > 1
+                ? outboundSegments.slice(0, -1).map(s => s.arrival_airport || s.arrival_iata).join(', ')
+                : null;
+
+              const { error } = await supabase.from('price_history').insert({
+                origin: route.origin,
+                destination: route.destination,
+                price: it.price.amount,
+                currency: it.price.currency,
+                duration_outbound: it.outbound.duration_minutes,
+                duration_inbound: it.inbound?.duration_minutes || null,
+                outbound_stops: (it.outbound.segments?.length || 1) - 1,
+                inbound_stops: (it.inbound?.segments?.length || 1) - 1,
+                outbound_hubs: hubs,
+                checked_at: checkTime,
+                outbound_departure: it.outbound.segments[0]?.departure_time_local,
+                outbound_arrival: it.outbound.segments[it.outbound.segments.length - 1]?.arrival_time_local,
+                inbound_departure: it.inbound?.segments[0]?.departure_time_local,
+                inbound_arrival: it.inbound?.segments[it.inbound.segments.length - 1]?.arrival_time_local,
+                airlines: JSON.stringify(
+                  [...new Set(it.outbound.segments.map(s => s.marketing_carrier_code))].concat(
+                    it.inbound?.segments?.map(s => s.marketing_carrier_code) || []
+                  )
+                )
+              });
+
+              if (error) {
+                log(`  ⚠️  Database insert failed: ${error.message}`);
+              }
+            }
+            successCount++;
+
+          } else {
+            log(`  ⚠️  API error (${result.status}): ${result.body.substring(0, 100)}`);
+          }
+
+        } catch (err) {
+          log(`  ❌ Error checking ${route.origin}→${route.destination} (depart ${departureDate}, return ${returnDate}): ${err.message}`);
+        }
       }
-    }
     }
   }
 
