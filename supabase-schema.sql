@@ -129,8 +129,7 @@ ORDER BY checked_at DESC;
 GRANT SELECT ON latest_prices TO anon, authenticated;
 GRANT SELECT ON price_trends TO anon, authenticated;
 
--- ============================================
--- 4. CLEANUP (Vacuum and Analyze)
--- ============================================
-VACUUM ANALYZE price_history;
-VACUUM ANALYZE request_count;
+-- Note: no manual VACUUM ANALYZE here — Supabase's SQL Editor runs pasted
+-- scripts inside a transaction, and Postgres forbids VACUUM inside one.
+-- Autovacuum handles this automatically; run VACUUM ANALYZE by hand outside
+-- a transaction (e.g. via psql) if you ever need to force it immediately.
