@@ -94,7 +94,10 @@ GRANT INSERT ON public.price_history TO service_role;
 -- ============================================
 
 -- View: Latest unique prices per route
-CREATE OR REPLACE VIEW latest_prices AS
+-- Dropped and recreated (not REPLACE) because Postgres forbids renaming or
+-- reordering existing view columns via CREATE OR REPLACE VIEW.
+DROP VIEW IF EXISTS latest_prices CASCADE;
+CREATE VIEW latest_prices AS
 SELECT DISTINCT ON (origin, destination)
   origin, destination, price, currency,
   duration_outbound, duration_inbound,
@@ -108,7 +111,8 @@ FROM price_history
 ORDER BY origin, destination, checked_at DESC;
 
 -- View: Price trends per check (last 30 days), one point per request time per route
-CREATE OR REPLACE VIEW price_trends AS
+DROP VIEW IF EXISTS price_trends CASCADE;
+CREATE VIEW price_trends AS
 SELECT
   origin, destination,
   checked_at,
