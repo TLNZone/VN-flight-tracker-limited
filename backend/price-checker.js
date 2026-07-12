@@ -78,12 +78,55 @@ async function incrementRequestCount(amount) {
   }
 }
 
-function summarizeSegments(segments) {
-  return (segments || []).map(s => ({
-    airline: s.operating_carrier_name || s.marketing_carrier_code,
-    code: s.marketing_carrier_code,
-    flight_number: s.flight_number
-  }));
+async function upsertFlights(segments) {
+  if (segments.length === 0) return new Map();
+
+  const uniqueByKey = new Map();
+  for (const s of segments) {
+    const key = `${s.marketing_carrier_code}:${s.flight_number}`;
+    if (!uniqueByKey.has(key)) {
+      uniqueByKey.set(key, {
+        marketing_carrier_code: s.marketing_carrier_code,
+        flight_number: String(s.flight_number),
+        operating_carrier_name: s.operating_carrier_name || null
+      });
+    }
+  }
+
+  const { data, error } = await supabase
+    .from('flights')
+    .upsert([...uniqueByKey.values()], { onConflict: 'marketing_carrier_code,flight_number' })
+    .select('id, marketing_carrier_code, flight_number');
+
+  if (error) {
+    log(`  ⚠️  Flight upsert failed: ${error.message}`);
+    return new Map();
+  }
+
+  return new Map(data.map(row => [`${row.marketing_carrier_code}:${row.flight_number}`, row.id]));
+}
+
+async function linkFlights(priceHistoryId, outboundSegs, inboundSegs) {
+  const flightIdByKey = await upsertFlights([...outboundSegs, ...inboundSegs]);
+
+  const junctionRows = [];
+  const addLeg = (segments, leg) => {
+    segments.forEach((s, i) => {
+      const flightId = flightIdByKey.get(`${s.marketing_carrier_code}:${s.flight_number}`);
+      if (flightId) {
+        junctionRows.push({ price_history_id: priceHistoryId, flight_id: flightId, leg, leg_position: i + 1 });
+      }
+    });
+  };
+  addLeg(outboundSegs, 'outbound');
+  addLeg(inboundSegs, 'inbound');
+
+  if (junctionRows.length === 0) return;
+
+  const { error } = await supabase.from('price_history_flights').insert(junctionRows);
+  if (error) {
+    log(`  ⚠️  price_history_flights insert failed: ${error.message}`);
+  }
 }
 
 function makeIgnavRequest(origin, destination, departureDate, returnDate) {
@@ -212,39 +255,41 @@ async function checkPrices() {
             }
 
             for (const it of itineraries) {
+              const outboundSegs = it.outbound.segments || [];
+              const inboundSegs = it.inbound?.segments || [];
+
               // Extract hub airports (connection points)
-              const outboundSegments = it.outbound.segments || [];
-              const hubs = outboundSegments.length > 1
-                ? outboundSegments.slice(0, -1).map(s => s.arrival_airport || s.arrival_iata).join(', ')
+              const hubs = outboundSegs.length > 1
+                ? outboundSegs.slice(0, -1).map(s => s.arrival_airport || s.arrival_iata).join(', ')
                 : null;
 
-              const { error } = await supabase.from('price_history').insert({
-                origin: route.origin,
-                destination: route.destination,
-                price: it.price.amount,
-                currency: it.price.currency,
-                duration_outbound: it.outbound.duration_minutes,
-                duration_inbound: it.inbound?.duration_minutes || null,
-                outbound_stops: (it.outbound.segments?.length || 1) - 1,
-                inbound_stops: (it.inbound?.segments?.length || 1) - 1,
-                outbound_hubs: hubs,
-                checked_at: checkTime,
-                outbound_departure: it.outbound.segments[0]?.departure_time_local,
-                outbound_arrival: it.outbound.segments[it.outbound.segments.length - 1]?.arrival_time_local,
-                inbound_departure: it.inbound?.segments[0]?.departure_time_local,
-                inbound_arrival: it.inbound?.segments[it.inbound.segments.length - 1]?.arrival_time_local,
-                airlines: JSON.stringify(
-                  [...new Set(it.outbound.segments.map(s => s.marketing_carrier_code))].concat(
-                    it.inbound?.segments?.map(s => s.marketing_carrier_code) || []
-                  )
-                ),
-                outbound_segments: JSON.stringify(summarizeSegments(it.outbound.segments)),
-                inbound_segments: JSON.stringify(summarizeSegments(it.inbound?.segments))
-              });
+              const { data: priceRow, error: insertError } = await supabase
+                .from('price_history')
+                .insert({
+                  origin: route.origin,
+                  destination: route.destination,
+                  price: it.price.amount,
+                  currency: it.price.currency,
+                  duration_outbound: it.outbound.duration_minutes,
+                  duration_inbound: it.inbound?.duration_minutes || null,
+                  outbound_stops: (outboundSegs.length || 1) - 1,
+                  inbound_stops: (inboundSegs.length || 1) - 1,
+                  outbound_hubs: hubs,
+                  checked_at: checkTime,
+                  outbound_departure: outboundSegs[0]?.departure_time_local,
+                  outbound_arrival: outboundSegs[outboundSegs.length - 1]?.arrival_time_local,
+                  inbound_departure: inboundSegs[0]?.departure_time_local,
+                  inbound_arrival: inboundSegs[inboundSegs.length - 1]?.arrival_time_local
+                })
+                .select('id')
+                .single();
 
-              if (error) {
-                log(`  ⚠️  Database insert failed: ${error.message}`);
+              if (insertError) {
+                log(`  ⚠️  Database insert failed: ${insertError.message}`);
+                continue;
               }
+
+              await linkFlights(priceRow.id, outboundSegs, inboundSegs);
             }
             successCount++;
 

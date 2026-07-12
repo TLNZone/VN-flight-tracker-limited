@@ -4,6 +4,8 @@
 -- This script creates all tables, views, and RLS policies
 -- Run this once in Supabase SQL Editor to set up the database correctly
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- ============================================
 -- 1. REQUEST COUNTER TABLE
 -- ============================================
@@ -53,15 +55,15 @@ CREATE TABLE IF NOT EXISTS price_history (
   outbound_arrival TIMESTAMP WITH TIME ZONE,
   inbound_departure TIMESTAMP WITH TIME ZONE,
   inbound_arrival TIMESTAMP WITH TIME ZONE,
-  airlines JSONB,                          -- JSON array of airline codes
-  outbound_segments JSONB,                 -- JSON array of {airline, code, flight_number} per outbound segment
-  inbound_segments JSONB,                  -- JSON array of {airline, code, flight_number} per inbound segment
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Add columns for deployments created before segment details were tracked
-ALTER TABLE price_history ADD COLUMN IF NOT EXISTS outbound_segments JSONB;
-ALTER TABLE price_history ADD COLUMN IF NOT EXISTS inbound_segments JSONB;
+-- Drop the old JSONB airline/segment columns — replaced by the flights and
+-- price_history_flights tables below, which model each itinerary's flights
+-- as proper relational entities instead of embedded JSON blobs.
+ALTER TABLE price_history DROP COLUMN IF EXISTS airlines;
+ALTER TABLE price_history DROP COLUMN IF EXISTS outbound_segments;
+ALTER TABLE price_history DROP COLUMN IF EXISTS inbound_segments;
 
 -- Create indexes for fast queries
 CREATE INDEX IF NOT EXISTS idx_price_history_route ON price_history(origin, destination);
@@ -90,7 +92,69 @@ GRANT SELECT ON public.price_history TO anon, authenticated;
 GRANT INSERT ON public.price_history TO service_role;
 
 -- ============================================
--- 3. VIEWS FOR DASHBOARD
+-- 3. FLIGHTS TABLE (deduped flight-number catalog)
+-- ============================================
+-- One row per unique marketing carrier + flight number (e.g. "AA100"),
+-- regardless of how many itineraries or checks reference it.
+CREATE TABLE IF NOT EXISTS flights (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  marketing_carrier_code VARCHAR(3) NOT NULL,
+  flight_number VARCHAR(10) NOT NULL,
+  operating_carrier_name VARCHAR(255),
+  UNIQUE (marketing_carrier_code, flight_number)
+);
+
+ALTER TABLE flights ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read flights" ON flights;
+DROP POLICY IF EXISTS "Allow service role insert flights" ON flights;
+DROP POLICY IF EXISTS "Allow service role update flights" ON flights;
+
+CREATE POLICY "Allow public read flights" ON flights
+  FOR SELECT USING (true);
+
+CREATE POLICY "Allow service role insert flights" ON flights
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Allow service role update flights" ON flights
+  FOR UPDATE USING (true) WITH CHECK (true);
+
+GRANT SELECT ON public.flights TO anon, authenticated;
+GRANT INSERT, UPDATE ON public.flights TO service_role;
+
+-- ============================================
+-- 4. PRICE_HISTORY_FLIGHTS TABLE (junction)
+-- ============================================
+-- Links each price_history itinerary to the flights it used. An itinerary
+-- can involve multiple flights per leg (connections), so this is a
+-- many-to-many relationship, ordered by position within outbound/inbound.
+CREATE TABLE IF NOT EXISTS price_history_flights (
+  id BIGSERIAL PRIMARY KEY,
+  price_history_id BIGINT NOT NULL REFERENCES price_history(id) ON DELETE CASCADE,
+  flight_id UUID NOT NULL REFERENCES flights(id),
+  leg VARCHAR(8) NOT NULL CHECK (leg IN ('outbound', 'inbound')),
+  leg_position SMALLINT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_phf_price_history ON price_history_flights(price_history_id);
+CREATE INDEX IF NOT EXISTS idx_phf_flight ON price_history_flights(flight_id);
+
+ALTER TABLE price_history_flights ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public read price_history_flights" ON price_history_flights;
+DROP POLICY IF EXISTS "Allow service role insert price_history_flights" ON price_history_flights;
+
+CREATE POLICY "Allow public read price_history_flights" ON price_history_flights
+  FOR SELECT USING (true);
+
+CREATE POLICY "Allow service role insert price_history_flights" ON price_history_flights
+  FOR INSERT WITH CHECK (true);
+
+GRANT SELECT ON public.price_history_flights TO anon, authenticated;
+GRANT INSERT ON public.price_history_flights TO service_role;
+
+-- ============================================
+-- 5. VIEWS FOR DASHBOARD
 -- ============================================
 
 -- View: Latest unique prices per route
@@ -105,8 +169,7 @@ SELECT DISTINCT ON (origin, destination)
   outbound_hubs,
   checked_at,
   outbound_departure, outbound_arrival,
-  inbound_departure, inbound_arrival,
-  airlines, outbound_segments, inbound_segments
+  inbound_departure, inbound_arrival
 FROM price_history
 ORDER BY origin, destination, checked_at DESC;
 

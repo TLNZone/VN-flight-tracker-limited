@@ -49,10 +49,10 @@ export default function App() {
     try {
       const [origin, destination] = selectedRoute.split(':');
 
-      // Fetch price history
+      // Fetch price history, with each itinerary's flights joined in
       const { data: historyData, error: historyError } = await supabase
         .from('price_history')
-        .select('*')
+        .select('*, price_history_flights(leg, leg_position, flights(marketing_carrier_code, flight_number, operating_carrier_name))')
         .eq('origin', origin)
         .eq('destination', destination)
         .order('checked_at', { ascending: false });

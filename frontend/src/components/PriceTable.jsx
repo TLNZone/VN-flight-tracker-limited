@@ -38,11 +38,16 @@ export default function PriceTable({ flights }) {
         </thead>
         <tbody>
           {flights.map((flight, idx) => {
-            const airlines = flight.airlines
-              ? [...new Set(JSON.parse(flight.airlines))]
-              : [];
-            const outboundSegments = flight.outbound_segments ? JSON.parse(flight.outbound_segments) : [];
-            const inboundSegments = flight.inbound_segments ? JSON.parse(flight.inbound_segments) : [];
+            const segments = flight.price_history_flights || [];
+            const outboundSegments = segments
+              .filter(s => s.leg === 'outbound')
+              .sort((a, b) => a.leg_position - b.leg_position)
+              .map(s => s.flights);
+            const inboundSegments = segments
+              .filter(s => s.leg === 'inbound')
+              .sort((a, b) => a.leg_position - b.leg_position)
+              .map(s => s.flights);
+            const airlines = [...new Set(segments.map(s => s.flights?.marketing_carrier_code).filter(Boolean))];
             const isDirect = flight.outbound_stops === 0;
             const isExpanded = expandedIdx === idx;
 
@@ -105,9 +110,10 @@ export default function PriceTable({ flights }) {
                             {durationHours(flight.duration_outbound)} ·{' '}
                             {isDirect ? 'Direct' : `${flight.outbound_stops} stop${flight.outbound_stops !== 1 ? 's' : ''}`}
                           </p>
-                          {outboundSegments.map((s, i) => (
+                          {outboundSegments.map((f, i) => (
                             <p key={i} className="segment">
-                              {s.airline} {s.code}{s.flight_number}
+                              {f.marketing_carrier_code}{f.flight_number}
+                              {f.operating_carrier_name ? ` (${f.operating_carrier_name})` : ''}
                             </p>
                           ))}
                         </div>
@@ -122,9 +128,10 @@ export default function PriceTable({ flights }) {
                                   ? 'Direct'
                                   : `${flight.inbound_stops} stop${flight.inbound_stops !== 1 ? 's' : ''}`}
                               </p>
-                              {inboundSegments.map((s, i) => (
+                              {inboundSegments.map((f, i) => (
                                 <p key={i} className="segment">
-                                  {s.airline} {s.code}{s.flight_number}
+                                  {f.marketing_carrier_code}{f.flight_number}
+                                  {f.operating_carrier_name ? ` (${f.operating_carrier_name})` : ''}
                                 </p>
                               ))}
                             </>
