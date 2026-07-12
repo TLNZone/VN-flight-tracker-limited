@@ -1,12 +1,12 @@
 # ✈️ Flight Price Tracker
 
-Auto-track flight prices from **Salzburg, Munich, Vienna, Frankfurt → Da Nang, Vietnam** using the Ignav API. Monitors prices 4 times daily, stores results in Supabase, displays trends in a web dashboard. **Completely free** (stays within Ignav's 1,000-request free tier).
+Auto-track flight prices from **Frankfurt/Munich → Ho Chi Minh City → Da Nang, Vietnam** using the Ignav API. Monitors prices 4 times daily, stores results in Supabase, displays trends in a web dashboard. **Completely free** (stays within Ignav's 1,000-request free tier).
 
 ## Features
 
 ✅ **Automatic Price Checks** (GitHub Actions)
 - 4–5 checks per day (6 AM, 12 PM, 6 PM, 10 PM UTC)
-- Queries 4 routes simultaneously
+- Queries 3 routes simultaneously
 - Auto-stops at 980 requests (100% free)
 
 ✅ **Price Trends** (Chart.js)
@@ -70,10 +70,9 @@ See [DEPLOYMENT.md](./DEPLOYMENT.md) for full setup.
 
 | From | To | Outbound | Return | Duration |
 |------|----|---------:|--------|---------:|
-| SZG (Salzburg) | DAD | Dec 19–22, 2026 | Jan 7–8, 2027 | ~20 days |
-| MUC (Munich) | DAD | (same) | (same) | |
-| VIE (Vienna) | DAD | (same) | (same) | |
-| FRA (Frankfurt) | DAD | (same) | (same) | |
+| FRA (Frankfurt) | SGN (Ho Chi Minh City) | Dec 20, 2026 | Jan 6–8, 2027 | ~18 days |
+| MUC (Munich) | SGN (Ho Chi Minh City) | (same) | (same) | |
+| SGN (Ho Chi Minh City) | DAD (Da Nang) | (same) | (same) | |
 
 **Constraints**:
 - Max €1,450/person

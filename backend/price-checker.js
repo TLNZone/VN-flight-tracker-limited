@@ -20,7 +20,7 @@ const MAX_STOPS = parseInt(process.env.MAX_STOPS || '2');
 const ADULTS = parseInt(process.env.ADULTS || '2');
 const CHILDREN = parseInt(process.env.CHILDREN || '2');
 
-// Parse routes (e.g., "SZG:DAD,MUC:DAD,VIE:DAD,FRA:DAD")
+// Parse routes (e.g., "FRA:SGN,MUC:SGN,SGN:DAD")
 const routes = process.env.ROUTES.split(',').map(r => {
   const [origin, dest] = r.split(':');
   return { origin: origin.trim(), destination: dest.trim() };

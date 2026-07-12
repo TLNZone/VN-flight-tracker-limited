@@ -18,7 +18,7 @@ export default function App() {
   const [flights, setFlights] = useState([]);
   const [trendData, setTrendData] = useState([]);
   const [requestCount, setRequestCount] = useState(0);
-  const [selectedRoute, setSelectedRoute] = useState('SZG:DAD');
+  const [selectedRoute, setSelectedRoute] = useState('FRA:SGN');
   const [loading, setLoading] = useState(false);
   const [sortBy, setSortBy] = useState('price');
   const [filterDirect, setFilterDirect] = useState(false);
@@ -32,10 +32,9 @@ export default function App() {
   });
 
   const routes = [
-    { code: 'SZG:DAD', label: 'Salzburg → Da Nang' },
-    { code: 'MUC:DAD', label: 'Munich → Da Nang' },
-    { code: 'VIE:DAD', label: 'Vienna → Da Nang' },
-    { code: 'FRA:DAD', label: 'Frankfurt → Da Nang' },
+    { code: 'FRA:SGN', label: 'Frankfurt → Ho Chi Minh City' },
+    { code: 'MUC:SGN', label: 'Munich → Ho Chi Minh City' },
+    { code: 'SGN:DAD', label: 'Ho Chi Minh City → Da Nang' },
   ];
 
   // Fetch flights and trends
@@ -137,7 +136,7 @@ export default function App() {
     <div className="app-container">
       <header className="header">
         <h1>✈️ Flight Price Tracker</h1>
-        <p>Salzburg, Munich, Vienna, Frankfurt → Da Nang, Vietnam</p>
+        <p>Frankfurt, Munich → Ho Chi Minh City → Da Nang, Vietnam</p>
       </header>
 
       <RequestCounter count={requestCount} limit={980} />
