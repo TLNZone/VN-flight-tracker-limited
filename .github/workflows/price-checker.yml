@@ -18,7 +18,7 @@ jobs:
       ROUTES: 'SZG:DAD,MUC:DAD,VIE:DAD,FRA:DAD'
       OUTBOUND_DATE: '2026-12-19'
       RETURN_DATE: '2027-01-07'
-      MAX_PRICE: 2000
+      MAX_PRICE: 6000
       MAX_DURATION: 26
     
     steps:
