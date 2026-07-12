@@ -62,10 +62,12 @@ CREATE TABLE IF NOT EXISTS price_history (
 
 -- Drop the old JSONB airline/segment columns — replaced by the flights and
 -- price_history_flights tables below, which model each itinerary's flights
--- as proper relational entities instead of embedded JSON blobs.
-ALTER TABLE price_history DROP COLUMN IF EXISTS airlines;
-ALTER TABLE price_history DROP COLUMN IF EXISTS outbound_segments;
-ALTER TABLE price_history DROP COLUMN IF EXISTS inbound_segments;
+-- as proper relational entities instead of embedded JSON blobs. CASCADE
+-- because the latest_prices view (recreated further down) still depends on
+-- these columns on a database that already has it.
+ALTER TABLE price_history DROP COLUMN IF EXISTS airlines CASCADE;
+ALTER TABLE price_history DROP COLUMN IF EXISTS outbound_segments CASCADE;
+ALTER TABLE price_history DROP COLUMN IF EXISTS inbound_segments CASCADE;
 
 -- Create indexes for fast queries
 CREATE INDEX IF NOT EXISTS idx_price_history_route ON price_history(origin, destination);
