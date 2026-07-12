@@ -36,44 +36,43 @@ export default function PriceTable({ flights }) {
         </thead>
         <tbody>
           {flights.map((flight, idx) => {
-            const airlines = flight.airlines ? JSON.parse(flight.airlines) : [];
-            const totalDays = flight.inbound_arrival 
-              ? Math.ceil(
-                  (new Date(flight.inbound_arrival) - new Date(flight.outbound_departure)) / 86400000
-                )
-              : '—';
-            
+            const airlines = flight.airlines
+              ? [...new Set(JSON.parse(flight.airlines))]
+              : [];
+            const isDirect = flight.outbound_stops === 0;
+
             return (
               <tr key={idx} className={idx === 0 ? 'best-price' : ''}>
                 <td className="price">
+                  {idx === 0 && <span className="best-badge">Best price</span>}
                   <strong>€{flight.price}</strong>
-                  <span className="per-person">/p</span>
+                  <span className="price-scope" title="Total price for 2 adults + 2 children">total</span>
                 </td>
                 <td className="time">
-                  {formatDate(flight.outbound_departure)}
-                  <br />
-                  {formatTime(flight.outbound_departure)}
+                  <span className="date">{formatDate(flight.outbound_departure)}</span>
+                  <span className="hour">{formatTime(flight.outbound_departure)}</span>
                 </td>
                 <td className="time">
-                  {formatDate(flight.outbound_arrival)}
-                  <br />
-                  {formatTime(flight.outbound_arrival)}
+                  <span className="date">{formatDate(flight.outbound_arrival)}</span>
+                  <span className="hour">{formatTime(flight.outbound_arrival)}</span>
                 </td>
                 <td className="duration">
                   {durationHours(flight.duration_outbound)}
                 </td>
                 <td className="stops">
-                  {flight.outbound_stops === 0 
-                    ? '✈️ Direct' 
-                    : flight.outbound_hubs || `${flight.outbound_stops} stop${flight.outbound_stops !== 1 ? 's' : ''}`
-                  }
+                  {isDirect ? (
+                    <span className="stop-badge direct">Direct</span>
+                  ) : (
+                    <span className="stop-badge" title={flight.outbound_hubs || ''}>
+                      {flight.outbound_stops} stop{flight.outbound_stops !== 1 ? 's' : ''}
+                    </span>
+                  )}
                 </td>
                 <td className="return">
                   {flight.inbound_departure ? (
                     <>
-                      {formatDate(flight.inbound_departure)}
-                      <br />
-                      {formatTime(flight.inbound_departure)}
+                      <span className="date">{formatDate(flight.inbound_departure)}</span>
+                      <span className="hour">{formatTime(flight.inbound_departure)}</span>
                     </>
                   ) : '—'}
                 </td>

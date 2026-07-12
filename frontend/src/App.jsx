@@ -22,7 +22,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [sortBy, setSortBy] = useState('price');
   const [filterDirect, setFilterDirect] = useState(false);
-  const [maxPrice, setMaxPrice] = useState(2000);
+  const [maxPrice, setMaxPrice] = useState(6000);
   const [maxDuration, setMaxDuration] = useState(30);
   const [stats, setStats] = useState({
     bestPrice: null,
@@ -126,11 +126,11 @@ export default function App() {
 
   const clearFilters = () => {
     setFilterDirect(false);
-    setMaxPrice(2000);
+    setMaxPrice(6000);
     setMaxDuration(26);
   };
 
-  const hasActiveFilters = filterDirect || maxPrice < 2000 || maxDuration < 30;
+  const hasActiveFilters = filterDirect || maxPrice < 6000 || maxDuration < 30;
 
   return (
     <div className="app-container">
@@ -223,17 +223,17 @@ export default function App() {
           </label>
 
           <label className="price-filter">
-            Max price per person (€):
+            Max total price (€):
             <input
               type="number"
               min="100"
-              max="5000"
+              max="6000"
               step="50"
               value={maxPrice}
               onChange={e => setMaxPrice(parseInt(e.target.value))}
               className="price-input"
             />
-            <span className="price-display">€{maxPrice}</span>
+            <span className="price-display">Max Amount (6000)</span>
           </label>
 
           <label className="duration-filter">

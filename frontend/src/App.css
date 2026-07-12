@@ -290,6 +290,139 @@ body {
 }
 
 /* ============================================
+   Price Table
+   ============================================ */
+
+.table-wrapper {
+  overflow-x: auto;
+  border: 1px solid #eee;
+  border-radius: 10px;
+}
+
+.price-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.price-table th {
+  text-align: left;
+  padding: 12px 16px;
+  background: #f8f9fc;
+  color: #888;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid #eee;
+  white-space: nowrap;
+}
+
+.price-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: middle;
+  color: #333;
+}
+
+.price-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.price-table tbody tr:hover {
+  background: #fafbff;
+}
+
+.price-table tr.best-price {
+  background: #f4f6ff;
+  box-shadow: inset 3px 0 0 #667eea;
+}
+
+.price-table tr.best-price:hover {
+  background: #eef1ff;
+}
+
+.price-table .price {
+  white-space: nowrap;
+}
+
+.price-table .price strong {
+  font-size: 18px;
+  font-weight: 700;
+  color: #667eea;
+}
+
+.price-table .price-scope {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: #999;
+  background: #f0f0f0;
+  border-radius: 4px;
+  padding: 2px 5px;
+  margin-left: 4px;
+  cursor: help;
+}
+
+.price-table .best-badge {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #667eea;
+  margin-bottom: 2px;
+}
+
+.price-table .time,
+.price-table .return {
+  white-space: nowrap;
+}
+
+.price-table .time .date,
+.price-table .return .date {
+  display: block;
+  color: #333;
+}
+
+.price-table .time .hour,
+.price-table .return .hour {
+  display: block;
+  color: #999;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.price-table .duration {
+  color: #666;
+  white-space: nowrap;
+}
+
+.price-table .stop-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #fff3cd;
+  color: #856404;
+  white-space: nowrap;
+}
+
+.price-table .stop-badge.direct {
+  background: #e3f7ee;
+  color: #1baf7a;
+}
+
+.price-table .airlines {
+  color: #888;
+  font-size: 13px;
+  letter-spacing: 0.3px;
+}
+
+/* ============================================
    Footer
    ============================================ */
 
@@ -395,8 +528,17 @@ body {
     padding: 12px;
   }
 
-  .table-section table {
+  .price-table {
     font-size: 12px;
+  }
+
+  .price-table th,
+  .price-table td {
+    padding: 10px 12px;
+  }
+
+  .price-table .price strong {
+    font-size: 16px;
   }
 }
 
