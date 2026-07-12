@@ -59,6 +59,7 @@ Edit `.github/workflows/price-checker.yml`:
 ```yaml
 env:
   ROUTES: 'FRA:SGN:2026-12-19|2026-12-20,MUC:SGN:2026-12-19|2026-12-20,SGN:DAD:2026-12-20|2026-12-21'
+  DISABLED_ROUTES: 'FRA:SGN'  # comma-separated ORIGIN:DEST pairs to skip without removing them from ROUTES
   RETURN_DATE: '2027-01-06,2027-01-07,2027-01-08'
   MAX_PRICE: 6000
   MAX_DURATION: 26

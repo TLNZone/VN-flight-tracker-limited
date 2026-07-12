@@ -20,6 +20,13 @@ const MAX_STOPS = parseInt(process.env.MAX_STOPS || '2');
 const ADULTS = parseInt(process.env.ADULTS || '2');
 const CHILDREN = parseInt(process.env.CHILDREN || '2');
 
+// Routes to skip entirely, e.g. "FRA:SGN,MUC:SGN" — kept in ROUTES/dates
+// config but not checked, so re-enabling is just removing the entry here.
+const DISABLED_ROUTES = (process.env.DISABLED_ROUTES || '')
+  .split(',')
+  .map(r => r.trim())
+  .filter(Boolean);
+
 // Parse routes with per-route departure dates
 // (e.g., "FRA:SGN:2026-12-19|2026-12-20,MUC:SGN:2026-12-19|2026-12-20,SGN:DAD:2026-12-20|2026-12-21")
 const routes = process.env.ROUTES.split(',').map(r => {
@@ -32,6 +39,12 @@ const routes = process.env.ROUTES.split(',').map(r => {
     destination: dest.trim(),
     departureDates: datesStr.split('|').map(d => d.trim())
   };
+}).filter(route => {
+  const disabled = DISABLED_ROUTES.includes(`${route.origin}:${route.destination}`);
+  if (disabled) {
+    console.log(`Skipping disabled route: ${route.origin} → ${route.destination}`);
+  }
+  return !disabled;
 });
 
 const RETURN_DATES = process.env.RETURN_DATE.split(',').map(d => d.trim());
