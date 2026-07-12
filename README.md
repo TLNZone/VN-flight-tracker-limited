@@ -77,8 +77,8 @@ See [DEPLOYMENT.md](./DEPLOYMENT.md) for full setup.
 
 **Constraints**:
 - Max €1,450/person
-- Max 22h flight duration
-- Max 1 stop (2 for Salzburg)
+- Max 26h flight duration
+- Max 2
 - Excludes Middle East hubs
 
 ## File Structure

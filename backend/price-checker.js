@@ -78,7 +78,7 @@ function makeIgnavRequest(origin, destination, departureDate, returnDate, maxSto
       cabin_class: 'economy',
       market: 'DE' 
     };
-      log(`Ignav payload: ${payload}`);
+      log(`Ignav payload: ${JSON.parse(payload)}`);
     const options = {
       hostname: 'ignav.com',
       path: '/api/fares/round-trip',
