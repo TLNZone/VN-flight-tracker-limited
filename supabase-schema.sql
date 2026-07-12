@@ -54,8 +54,14 @@ CREATE TABLE IF NOT EXISTS price_history (
   inbound_departure TIMESTAMP WITH TIME ZONE,
   inbound_arrival TIMESTAMP WITH TIME ZONE,
   airlines JSONB,                          -- JSON array of airline codes
+  outbound_segments JSONB,                 -- JSON array of {airline, code, flight_number} per outbound segment
+  inbound_segments JSONB,                  -- JSON array of {airline, code, flight_number} per inbound segment
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Add columns for deployments created before segment details were tracked
+ALTER TABLE price_history ADD COLUMN IF NOT EXISTS outbound_segments JSONB;
+ALTER TABLE price_history ADD COLUMN IF NOT EXISTS inbound_segments JSONB;
 
 -- Create indexes for fast queries
 CREATE INDEX IF NOT EXISTS idx_price_history_route ON price_history(origin, destination);
@@ -89,31 +95,31 @@ GRANT INSERT ON public.price_history TO service_role;
 
 -- View: Latest unique prices per route
 CREATE OR REPLACE VIEW latest_prices AS
-SELECT DISTINCT ON (origin, destination) 
-  origin, destination, price, currency, 
+SELECT DISTINCT ON (origin, destination)
+  origin, destination, price, currency,
   duration_outbound, duration_inbound,
   outbound_stops, inbound_stops,
   outbound_hubs,
   checked_at,
   outbound_departure, outbound_arrival,
   inbound_departure, inbound_arrival,
-  airlines
+  airlines, outbound_segments, inbound_segments
 FROM price_history
 ORDER BY origin, destination, checked_at DESC;
 
--- View: Price trends (last 30 days)
+-- View: Price trends per check (last 30 days), one point per request time per route
 CREATE OR REPLACE VIEW price_trends AS
-SELECT 
+SELECT
   origin, destination,
-  DATE(checked_at) as date,
+  checked_at,
   MIN(price) as min_price,
   MAX(price) as max_price,
   AVG(price)::INT as avg_price,
   COUNT(*) as checks
 FROM price_history
 WHERE checked_at > NOW() - INTERVAL '30 days'
-GROUP BY origin, destination, DATE(checked_at)
-ORDER BY origin, destination, date DESC;
+GROUP BY origin, destination, checked_at
+ORDER BY checked_at DESC;
 
 -- Grant permissions on views
 GRANT SELECT ON latest_prices TO anon, authenticated;

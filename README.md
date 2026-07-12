@@ -68,11 +68,11 @@ See [DEPLOYMENT.md](./DEPLOYMENT.md) for full setup.
 
 ## Routes & Dates
 
-| From | To | Outbound | Return | Duration |
-|------|----|---------:|--------|---------:|
-| FRA (Frankfurt) | SGN (Ho Chi Minh City) | Dec 20, 2026 | Jan 6–8, 2027 | ~18 days |
-| MUC (Munich) | SGN (Ho Chi Minh City) | (same) | (same) | |
-| SGN (Ho Chi Minh City) | DAD (Da Nang) | (same) | (same) | |
+| From | To | Outbound | Return |
+|------|----|---------:|--------|
+| FRA (Frankfurt) | SGN (Ho Chi Minh City) | Dec 19–20, 2026 | Jan 6–8, 2027 |
+| MUC (Munich) | SGN (Ho Chi Minh City) | Dec 19–20, 2026 | Jan 6–8, 2027 |
+| SGN (Ho Chi Minh City) | DAD (Da Nang) | Dec 20–21, 2026 | Jan 6–8, 2027 |
 
 **Constraints**:
 - Max €1,450/person

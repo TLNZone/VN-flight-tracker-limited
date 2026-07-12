@@ -61,14 +61,12 @@ export default function App() {
 
       setFlights(historyData || []);
 
-      // Fetch trends
+      // Fetch trends for all routes together, ordered by request time
       const { data: trendsData, error: trendsError } = await supabase
         .from('price_trends')
         .select('*')
-        .eq('origin', origin)
-        .eq('destination', destination)
-        .order('date', { ascending: false })
-        .limit(30);
+        .order('checked_at', { ascending: false })
+        .limit(90);
 
       if (trendsError) throw trendsError;
 
@@ -167,8 +165,8 @@ export default function App() {
 
       {/* Price Trends Chart */}
       <div className="chart-section">
-        <h2>Price Trends</h2>
-        <PriceChart trends={trendData} routeKey={selectedRoute} />
+        <h2>Price Trends (all routes)</h2>
+        <PriceChart trends={trendData} />
       </div>
 
       {/* Route Selector */}

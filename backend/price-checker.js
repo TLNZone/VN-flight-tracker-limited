@@ -20,13 +20,20 @@ const MAX_STOPS = parseInt(process.env.MAX_STOPS || '2');
 const ADULTS = parseInt(process.env.ADULTS || '2');
 const CHILDREN = parseInt(process.env.CHILDREN || '2');
 
-// Parse routes (e.g., "FRA:SGN,MUC:SGN,SGN:DAD")
+// Parse routes with per-route departure dates
+// (e.g., "FRA:SGN:2026-12-19|2026-12-20,MUC:SGN:2026-12-19|2026-12-20,SGN:DAD:2026-12-20|2026-12-21")
 const routes = process.env.ROUTES.split(',').map(r => {
-  const [origin, dest] = r.split(':');
-  return { origin: origin.trim(), destination: dest.trim() };
+  const [origin, dest, datesStr] = r.split(':');
+  if (!datesStr) {
+    throw new Error(`Route "${r}" is missing departure dates (expected ORIGIN:DEST:date1|date2)`);
+  }
+  return {
+    origin: origin.trim(),
+    destination: dest.trim(),
+    departureDates: datesStr.split('|').map(d => d.trim())
+  };
 });
 
-const OUTBOUND_DATES = process.env.OUTBOUND_DATE.split(',').map(d => d.trim());
 const RETURN_DATES = process.env.RETURN_DATE.split(',').map(d => d.trim());
 // Check the latest return date first — if that outbound leg has no availability at
 // all, the earlier return dates won't either, so skip them and save the request.
@@ -69,6 +76,14 @@ async function incrementRequestCount(amount) {
   if (error && !error.message.includes('no rows')) {
     log(`Warning: Could not update request count: ${error.message}`);
   }
+}
+
+function summarizeSegments(segments) {
+  return (segments || []).map(s => ({
+    airline: s.operating_carrier_name || s.marketing_carrier_code,
+    code: s.marketing_carrier_code,
+    flight_number: s.flight_number
+  }));
 }
 
 function makeIgnavRequest(origin, destination, departureDate, returnDate) {
@@ -141,7 +156,7 @@ async function checkPrices() {
 
   routeLoop:
   for (const route of routes) {
-    for (const departureDate of OUTBOUND_DATES) {
+    for (const departureDate of route.departureDates) {
       let departureHasNoFlights = false;
 
       for (let i = 0; i < RETURN_DATES_CHECK_ORDER.length; i++) {
@@ -222,7 +237,9 @@ async function checkPrices() {
                   [...new Set(it.outbound.segments.map(s => s.marketing_carrier_code))].concat(
                     it.inbound?.segments?.map(s => s.marketing_carrier_code) || []
                   )
-                )
+                ),
+                outbound_segments: JSON.stringify(summarizeSegments(it.outbound.segments)),
+                inbound_segments: JSON.stringify(summarizeSegments(it.inbound?.segments))
               });
 
               if (error) {

@@ -387,6 +387,12 @@ body {
   margin-bottom: 4px;
 }
 
+.flight-detail p.segment {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 2px;
+}
+
 @keyframes flight-detail-in {
   from {
     opacity: 0;

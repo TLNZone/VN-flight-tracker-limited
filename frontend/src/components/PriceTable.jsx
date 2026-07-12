@@ -41,6 +41,8 @@ export default function PriceTable({ flights }) {
             const airlines = flight.airlines
               ? [...new Set(JSON.parse(flight.airlines))]
               : [];
+            const outboundSegments = flight.outbound_segments ? JSON.parse(flight.outbound_segments) : [];
+            const inboundSegments = flight.inbound_segments ? JSON.parse(flight.inbound_segments) : [];
             const isDirect = flight.outbound_stops === 0;
             const isExpanded = expandedIdx === idx;
 
@@ -103,6 +105,11 @@ export default function PriceTable({ flights }) {
                             {durationHours(flight.duration_outbound)} ·{' '}
                             {isDirect ? 'Direct' : `${flight.outbound_stops} stop${flight.outbound_stops !== 1 ? 's' : ''}`}
                           </p>
+                          {outboundSegments.map((s, i) => (
+                            <p key={i} className="segment">
+                              {s.airline} {s.code}{s.flight_number}
+                            </p>
+                          ))}
                         </div>
                         <div className="detail-col">
                           <h4>Return</h4>
@@ -115,6 +122,11 @@ export default function PriceTable({ flights }) {
                                   ? 'Direct'
                                   : `${flight.inbound_stops} stop${flight.inbound_stops !== 1 ? 's' : ''}`}
                               </p>
+                              {inboundSegments.map((s, i) => (
+                                <p key={i} className="segment">
+                                  {s.airline} {s.code}{s.flight_number}
+                                </p>
+                              ))}
                             </>
                           ) : (
                             <p>—</p>
