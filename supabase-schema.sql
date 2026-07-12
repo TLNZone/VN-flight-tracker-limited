@@ -98,14 +98,24 @@ GRANT INSERT ON public.price_history TO service_role;
 -- ============================================
 -- 3. FLIGHTS TABLE (deduped flight-number catalog)
 -- ============================================
--- One row per unique marketing carrier + flight number (e.g. "AA100"),
--- regardless of how many itineraries or checks reference it.
+-- One row per unique marketing carrier + flight number + departure date
+-- (e.g. "AA100 on 2026-12-19"). Flight numbers are daily schedules, not
+-- permanent identifiers, so the same number on a different date may be a
+-- different actual flight — date is part of what makes it unique.
+--
+-- Dropped and recreated (not just IF NOT EXISTS) because the unique key
+-- changed from (code, number) to (code, number, date) — flights and its
+-- dependent price_history_flights are derived/supplementary data, safe to
+-- rebuild from scratch on future price checks.
+DROP TABLE IF EXISTS price_history_flights CASCADE;
+DROP TABLE IF EXISTS flights CASCADE;
 CREATE TABLE IF NOT EXISTS flights (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   marketing_carrier_code VARCHAR(3) NOT NULL,
   flight_number VARCHAR(10) NOT NULL,
   operating_carrier_name VARCHAR(255),
-  UNIQUE (marketing_carrier_code, flight_number)
+  departure_date DATE NOT NULL,
+  UNIQUE (marketing_carrier_code, flight_number, departure_date)
 );
 
 ALTER TABLE flights ENABLE ROW LEVEL SECURITY;

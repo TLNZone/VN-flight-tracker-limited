@@ -78,32 +78,43 @@ async function incrementRequestCount(amount) {
   }
 }
 
+function segmentDate(s) {
+  return s.departure_time_local ? s.departure_time_local.split('T')[0] : null;
+}
+
+function flightKey(s) {
+  return `${s.marketing_carrier_code}:${s.flight_number}:${segmentDate(s)}`;
+}
+
 async function upsertFlights(segments) {
   if (segments.length === 0) return new Map();
 
   const uniqueByKey = new Map();
   for (const s of segments) {
-    const key = `${s.marketing_carrier_code}:${s.flight_number}`;
+    const key = flightKey(s);
     if (!uniqueByKey.has(key)) {
       uniqueByKey.set(key, {
         marketing_carrier_code: s.marketing_carrier_code,
         flight_number: String(s.flight_number),
-        operating_carrier_name: s.operating_carrier_name || null
+        operating_carrier_name: s.operating_carrier_name || null,
+        departure_date: segmentDate(s)
       });
     }
   }
 
   const { data, error } = await supabase
     .from('flights')
-    .upsert([...uniqueByKey.values()], { onConflict: 'marketing_carrier_code,flight_number' })
-    .select('id, marketing_carrier_code, flight_number');
+    .upsert([...uniqueByKey.values()], { onConflict: 'marketing_carrier_code,flight_number,departure_date' })
+    .select('id, marketing_carrier_code, flight_number, departure_date');
 
   if (error) {
     log(`  ⚠️  Flight upsert failed: ${error.message}`);
     return new Map();
   }
 
-  return new Map(data.map(row => [`${row.marketing_carrier_code}:${row.flight_number}`, row.id]));
+  return new Map(
+    data.map(row => [`${row.marketing_carrier_code}:${row.flight_number}:${row.departure_date}`, row.id])
+  );
 }
 
 async function linkFlights(priceHistoryId, outboundSegs, inboundSegs) {
@@ -112,7 +123,7 @@ async function linkFlights(priceHistoryId, outboundSegs, inboundSegs) {
   const junctionRows = [];
   const addLeg = (segments, leg) => {
     segments.forEach((s, i) => {
-      const flightId = flightIdByKey.get(`${s.marketing_carrier_code}:${s.flight_number}`);
+      const flightId = flightIdByKey.get(flightKey(s));
       if (flightId) {
         junctionRows.push({ price_history_id: priceHistoryId, flight_id: flightId, leg, leg_position: i + 1 });
       }
